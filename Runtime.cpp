@@ -182,7 +182,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	/* For all wanted layers...*/
 	int layerCount = rdPtr->p->layers->size();
 
-	if(layerCount == 0)
+	if(!layerCount)
 		return 0;
 
 	int minLayer = max(0, min(layerCount-1, rdPtr->minLayer));
