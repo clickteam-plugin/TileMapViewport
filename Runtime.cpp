@@ -101,10 +101,8 @@ short WINAPI DLLExport DestroyRunObject(LPRDATA rdPtr, long fast)
 	{
 		rdPtr->p->viewports->remove(rdPtr);
 	}
-
+	
 	delete rdPtr->surface;
-
-	// No errors
 	delete rdPtr->rRd;
 	return 0;
 }
