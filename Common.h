@@ -8,6 +8,15 @@
 // General includes
 #include	"TemplateInc.h"
 
+
+#ifdef HWABETA
+#define SURF_DRIVER SD_D3D9
+#define SURF_TYPE ST_HWA_RTTEXTURE
+#else
+#define SURF_DRIVER SD_DIB
+#define SURF_TYPE ST_MEMORY
+#endif
+
 #define MAXTILESETS 100
 
 // Specific to this extension
@@ -29,14 +38,6 @@ using namespace std;
 #include	"CfcFile.h"
 #include	"Data.h"
 
-#ifdef HWABETA
-#define SURFACE_TYPE ST_HWA_RTTEXTURE
-#define SURFACE_DRIVER SD_D3D9
-#else
-#define SURFACE_TYPE ST_MEMORY
-#define SURFACE_DRIVER SD_DIB
-#endif
-
 #include "ObjectSelection.h"
 
 // rTemplate include
@@ -44,12 +45,12 @@ using namespace std;
 
 inline int getLayerX(LPRDATA rdPtr, Layer* layer)
 {
-	return -(int)((rdPtr->cameraX - layer->offsetX) * layer->scrollX);
+	return (int)((layer->offsetX - rdPtr->cameraX) * layer->scrollX);
 }
 
 inline int getLayerY(LPRDATA rdPtr, Layer* layer)
 {
-	return -(int)((rdPtr->cameraY - layer->offsetY) * layer->scrollY);	
+	return (int)((layer->offsetY - rdPtr->cameraY) * layer->scrollY);
 }
 
 inline int floordiv(int x, int d)

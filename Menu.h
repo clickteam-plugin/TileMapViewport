@@ -21,6 +21,8 @@
 		ITEM(4, "Enable")
 		ITEM(5, "Disable")
 		SEPARATOR
+		ITEM(7, "Set tile render overflow")
+		SEPARATOR
 		SUB_START("On tile")
 			ITEM(3, "Set on-screen offset")
 			ITEM(6, "Set tile")
@@ -56,6 +58,7 @@
 			ITEM(1, "Y")
 		SUB_END
 	SUB_END
+	SEPARATOR
 
 
 #endif

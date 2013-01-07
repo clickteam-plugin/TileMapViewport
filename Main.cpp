@@ -14,8 +14,12 @@
 
 bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 {
-	long param = (long)&(*rdPtr->p->layers)[0];
-	Layer* layer = (Layer*)param;
+	if(!rdPtr->p)
+		return false;
+
+	Layer* layer = rdPtr->cndLayer;
+	if(!layer->isValid())
+		return false;
 
 	LPHO obj = (LPHO)runObj;
 	
@@ -28,7 +32,7 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	/* Get tileset's settings */
 	cSurface* surface = tileset->surface;
 	if(!surface)
-		return 0;
+		return false;
 	COLORREF transpCol = tileset->transpCol;
 
 	/* Store tile size (we'll need it often) */
@@ -36,8 +40,8 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	int tileHeight = rdPtr->p->tileHeight;
 
 	/* Compute layer position on screen */
-	int tlX = int(rdPtr->cameraX*(1 - layer->scrollX) + layer->offsetX * layer->scrollX) + rdPtr->rHo.hoRect.left;
-	int tlY = int(rdPtr->cameraY*(1 - layer->scrollY) + layer->offsetY * layer->scrollY) + rdPtr->rHo.hoRect.top;
+	int tlX = getLayerX(rdPtr, layer) + rdPtr->rHo.hoRect.left;
+	int tlY = getLayerY(rdPtr, layer) + rdPtr->rHo.hoRect.top;
 
 	/* Get object coordinates */
 	int objX = obj->hoX - obj->hoImgXSpot;
@@ -54,15 +58,18 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 		|| objY+obj->hoImgHeight < rdPtr->rHo.hoY
 		|| objX > rdPtr->rHo.hoX+rdPtr->rHo.hoImgWidth
 		|| objY > rdPtr->rHo.hoY+rdPtr->rHo.hoImgHeight)
-			return 0;
+			return false;
 	}
+
+	/* Convert to on-screen coordinates */
+	objX -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
+	objY -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
 
 	/* Wrap the coordinates if necessary */
 	if(layer->wrapX)
 	{
 		while(objX < 0)
 			objX += layerWidth;
-
 
 		objX %= layerWidth; 
 	}
@@ -105,9 +112,13 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	{
 		for(int y = y1; y <= y2; ++y)
 		{
-			Tile* tile = layer->data + x + y*width;
+			Tile* tile = layer->get(x, y);
 			if(tile->x != 0xff && tile->y != 0xff)
 			{
+				/* Bounding box collisions - we're done */
+				if(!rdPtr->fineColl)
+					return true;
+
 				/* Get bounding box of tile */
 				int tileX1 = tileWidth * x;
 				int tileY1 = tileHeight * y;
@@ -115,10 +126,10 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 				int tileY2 = tileHeight * (y+1);
 
 				/* Get intersection box (relative to tile) */
-				int x1 = max(objX1, tileX1) - tileX1;
-				int y1 = max(objY1, tileY1) - tileY1;
-				int x2 = min(objX2, tileX2) - tileX1;
-				int y2 = min(objY2, tileY2) - tileY1;
+				int xx1 = max(objX1, tileX1) - tileX1;
+				int yy1 = max(objY1, tileY1) - tileY1;
+				int xx2 = min(objX2, tileX2) - tileX1;
+				int yy2 = min(objY2, tileY2) - tileY1;
 
 				/* Get position of tile in tileset */
 				int tilesetX = tile->x * tileWidth;
@@ -132,10 +143,10 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 					cSurface* alphaSurf = surface->GetAlphaSurface();
 					BYTE* alphaBuff = alphaSurf->LockBuffer();
 
-					for(int xx = x1; xx < x2; ++xx)
-						for(int yy = y1; yy < y2; ++yy)
+					for(int xx = xx1; xx < xx2; ++xx)
+						for(int yy = yy1; yy < yy2; ++yy)
 							if(alphaSurf->GetPixelFast8(tilesetX+xx, tilesetY+yy) > 0)
-								return 1;
+								return true;
 				
 					alphaSurf->UnlockBuffer(alphaBuff);
 					surface->ReleaseAlphaSurface(alphaSurf);
@@ -145,12 +156,16 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 				{
 					BYTE* buffer = surface->LockBuffer();
 
-					for(int xx = x1; xx < x2; ++xx)
-						for(int yy = y1; yy < y2; ++yy)
+					cSurface objectSurf;
+					LockImageSurface(rdPtr->rHo.hoAdRunHeader->rhIdAppli, runObj->roc.rcImage, objectSurf);
+
+					for(int xx = xx1; xx < xx2; ++xx)
+						for(int yy = yy1; yy < yy2; ++yy)
 							if(surface->GetPixelFast(tilesetX+xx, tilesetY+yy) != transpCol)
-								return 1;
+								return true;
 
 					surface->UnlockBuffer(buffer);
+					UnlockImageSurface(objectSurf);
 				}
 
 			}
@@ -163,10 +178,9 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 CONDITION(
 	/* ID */			0,
 	/* Name */			"%o: %0 is overlapping layer %1",
-	/* Flags */			EVFLAGS_ALWAYS | EVFLAG2_NOTABLE,
+	/* Flags */			EVFLAGS_ALWAYS|EVFLAGS_NOTABLE,
 	/* Params */		(2, PARAM_OBJECT,"Object", PARAM_NUMBER,"Layer index")
 ) {
-	printf("%d\n", rdPtr->rHo.hoAdRunHeader->rh4.rh4EventCount);
 	if(!rdPtr->p)
 		return false;
 
@@ -186,6 +200,7 @@ CONDITION(
 	bool isNegated = (pe->evtFlags2 & EVFLAG2_NOT);
 	short oi = ((eventParam*)param1)->evp.evpW.evpW0;
 
+	rdPtr->cndLayer = layer;
 	return select.FilterObjects(rdPtr, oi, isNegated, cndObjOverlapsLayer);
 }
 
@@ -260,7 +275,7 @@ ACTION(
 
 ACTION(
 	/* ID */			3,
-	/* Name */			"Set callback tile offset to (%0,%1)",
+	/* Name */			"Set callback tile offset to (%0, %1)",
 	/* Flags */			0,
 	/* Params */		(2, PARAM_NUMBER,"X offset (pixels)", PARAM_NUMBER,"Y offset (pixels)")
 ) {
@@ -289,13 +304,28 @@ ACTION(
 
 ACTION(
 	/* ID */			6,
-	/* Name */			"Set callback tile to (%0,%1)",
+	/* Name */			"Set callback tile to (%0, %1)",
 	/* Flags */			0,
 	/* Params */		(2, PARAM_NUMBER,"Tileset X", PARAM_NUMBER,"Tileset Y")
 ) {
 	rdPtr->callback.tile.x = (unsigned char)intParam();
 	rdPtr->callback.tile.y = (unsigned char)intParam();
 }
+
+
+ACTION(
+	/* ID */			7,
+	/* Name */			"Set callback tile overflow to (%0, %1)",
+	/* Flags */			0,
+	/* Params */		(2, PARAM_NUMBER, "Number of extra tile columns to render on each side (Default: 0)",
+							PARAM_NUMBER, "Number of extra tile rows to render on each side (Default: 0)")
+) {
+	rdPtr->callback.borderX = intParam();
+	rdPtr->callback.borderY = intParam();
+	rdPtr->callback.borderX = max(0, min(1000, rdPtr->callback.borderX));
+	rdPtr->callback.borderY = max(0, min(1000, rdPtr->callback.borderY));
+}
+
 
 // ============================================================================
 //

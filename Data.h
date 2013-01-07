@@ -59,16 +59,25 @@ struct RUNDATA
 
 	/* Misc. settings */
 	bool			outsideColl;
+	bool			fineColl;
+	Layer*			cndLayer;
 
 	/* Display surface */
 	bool			transparent;
 	COLORREF		background;
 	cSurface*		surface;
 
+	/* On collision */
+	Tile			collTile;
+
 	/* Callback for rendering */
 	struct
 	{
 		bool		use;
+
+		/* Additional tile render border */
+		int			borderX;
+		int			borderY;
 
 		/* Data that can be modified */
 		bool		visible;
@@ -107,7 +116,9 @@ typedef struct tagEDATA_V1
 	short			minLayer;
 	short			maxLayer;
 
-	bool			outsideColl;
+	bool			outsideColl : 1;
+	bool			fineColl : 1;
+	bool			__boolPadding : 6;
 
 } EDITDATA;
 typedef EDITDATA * LPEDATA;

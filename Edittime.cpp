@@ -23,6 +23,7 @@ PROPS_IDS_START()
 
 	PROPID_GRP_COLL,
 	PROPID_OUTSIDECOLL,
+	PROPID_FINECOLL,
 
 	PROPID_GRP_LAYERS,
 	PROPID_MINLAYER,
@@ -35,10 +36,11 @@ PROPS_DATA_START()
 
 	PropData_Group(PROPID_GRP_DISPLAY, (int)"Display", (int)""),
 	PropData_CheckBox(PROPID_TRANSPARENT, (int)"Transparent", (int)"Use with caution - a background may greatly increase the FPS, especially in HWA."),
-	PropData_CheckBox(PROPID_AUTOSCROLL, (int)"Follow MMF camera", (int)"If checked, the Tile Map automatically follows the MMF camera."),
+	PropData_CheckBox(PROPID_AUTOSCROLL, (int)"Follow MMF camera", (int)"The Tile Map automatically follows the MMF camera."),
 
 	PropData_Group(PROPID_GRP_COLL, (int)"Collisions", (int)""),
-	PropData_CheckBox(PROPID_OUTSIDECOLL, (int)"Handle outside of viewport", (int)"If checked, collisions with tiles are handled even if they aren't within the viewport."),
+	PropData_CheckBox(PROPID_OUTSIDECOLL, (int)"Handle outside of viewport", (int)"Collisions with tiles are handled even if they aren't within the viewport."),
+	PropData_CheckBox(PROPID_FINECOLL, (int)"Pixel-based collisions", (int)"\"Transparent pixels of a tile won't collide. This is a lot slower, so if your game doesn't have slopes, uncheck it."),
 
 	PropData_Group(PROPID_GRP_LAYERS, (int)"Layers to draw", (int)""),
 	PropData_EditNumber(PROPID_MINLAYER, (int)"Minimum", (int)"0-based index of the lowest layer to draw."),
@@ -194,6 +196,9 @@ BOOL WINAPI DLLExport GetPropCheck(LPMV mV, LPEDATA edPtr, UINT nPropID)
 			return edPtr->transparent;
 		case PROPID_OUTSIDECOLL:
 			return edPtr->outsideColl;
+		case PROPID_FINECOLL:
+			return edPtr->fineColl;
+
 
 	}
 
@@ -265,6 +270,11 @@ void WINAPI DLLExport SetPropCheck(LPMV mV, LPEDATA edPtr, UINT nPropID, BOOL nC
 
 	case PROPID_OUTSIDECOLL:
 		edPtr->outsideColl = nCheck ? true : false;
+		mvInvalidateObject(mV, edPtr);
+		break;
+
+	case PROPID_FINECOLL:
+		edPtr->fineColl = nCheck ? true : false;
 		mvInvalidateObject(mV, edPtr);
 		break;
 
@@ -562,6 +572,8 @@ int WINAPI DLLExport CreateObject(mv _far *mV, fpLevObj loPtr, LPEDATA edPtr)
 	edPtr->maxLayer = 999;
 
 	edPtr->outsideColl = false;
+	edPtr->fineColl = true;
+	edPtr->__boolPadding = 0;
 
 	return 0;	// No error
 

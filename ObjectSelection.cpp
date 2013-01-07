@@ -113,6 +113,9 @@ bool ObjectSelection::FilterNonQualifierObjects(LPRDATA rdPtr, short Oi, bool ne
 	LPOIL pObjectInfo = GetOILFromOI(Oi);
 	bool hasSelected = false;
 
+	if(!pObjectInfo)
+		return false;
+
 	if(pObjectInfo->oilEventCount != rhPtr->rh2.rh2EventCount)
 		SelectAll(Oi);	//The SOL is invalid, must reset.
 
