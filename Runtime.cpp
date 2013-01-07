@@ -134,8 +134,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
 	if(rdPtr->autoScroll)
 	{
-		rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX; // + rdPtr->rHo.hoImgWidth/2;
-		rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY; // + rdPtr->rHo.hoImgHeight/2;
+		rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
+		rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
 	}
 	
 	/* Store drawing settings for fast access */
@@ -152,7 +152,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	int width = rdPtr->rHo.hoImgWidth;
 	int height = rdPtr->rHo.hoImgHeight;
 
-	/* Whether or not we use a temporary surface (coordinate shifting) */
+	/* Whether or not we use a temporary surface (-> coordinate shifting) */
 #ifdef HWABETA
 	bool tempSurf = false;
 #else
@@ -338,12 +338,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							}
 
 							/* Blit from the surface of the tileset with the tile's index in the layer tilesets */
-//#ifdef HWABETA
-//							POINT center = {0, 0};
-//							tileSurf->BlitEx(*target, screenX+offsetX, screenY+offsetY, 1, 1, tile->x*tW, tile->y*tH, tW, tH, &center, 0, BMODE_TRANSP, blitOp, blitParam);
-//#else
 							tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
-//#endif
 						}
 						while(0);
 
@@ -358,7 +353,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		}
 	}
 
-	/* Finally, blit the whole image */
+	/* Finish up */
 	if(tempSurf)
 	{
 		rdPtr->surface->Blit(*ps, x, y, BMODE_OPAQUE,

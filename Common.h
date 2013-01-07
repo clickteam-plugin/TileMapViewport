@@ -7,28 +7,21 @@
 
 // General includes
 #include	"TemplateInc.h"
-
-
-#ifdef HWABETA
-#define SURF_DRIVER SD_D3D9
-#define SURF_TYPE ST_HWA_RTTEXTURE
-#else
-#define SURF_DRIVER SD_DIB
-#define SURF_TYPE ST_MEMORY
-#endif
-
-#define MAXTILESETS 100
-
-// Specific to this extension
 #include	<vector>
-//#include	"tinyxml/tinyxml.h"
-//#include	<b64/cencode.h>
-//#include	<b64/cdecode.h>
-#include <fstream>
+#include	<fstream>
+#include	<shlwapi.h>
+#pragma		comment(lib, "shlwapi.lib")
 using namespace std;
 
-#include <shlwapi.h>
-#pragma comment(lib, "shlwapi.lib")
+#define MAXTILESETS	100
+
+#ifdef	HWABETA
+#define SURF_DRIVER	SD_D3D9
+#define SURF_TYPE	ST_HWA_RTTEXTURE
+#else
+#define SURF_DRIVER	SD_DIB
+#define SURF_TYPE	ST_MEMORY
+#endif
 
 #include	"Resource.h"
 #include	"FlagsPrefs.h"
@@ -37,10 +30,7 @@ using namespace std;
 #include	"ImgFlt.h"
 #include	"CfcFile.h"
 #include	"Data.h"
-
-#include "ObjectSelection.h"
-
-// rTemplate include
+#include	"ObjectSelection.h"
 #include	"rTemplate.h"
 
 inline int getLayerX(LPRDATA rdPtr, Layer* layer)
@@ -83,50 +73,3 @@ extern WORD DebugTree[];
 
 // End include guard
 #endif
-
-
-		///* Local to global tileset conversion table */
-		//unsigned char tilesetsUsed = 128;
-		//for(int i = 127; i > 0; --i)
-		//{
-		//	if(layer->tilesets[i] != -1)
-		//		break;
-
-		//	tilesetsUsed--;
-		//}
-		//fwrite(&tilesetsUsed, sizeof(char), 1, file);
-		//fwrite(&layer->tilesets[0], tilesetsUsed*sizeof(short), 1, file);
-
-						///* Local to global tileset conversion table */
-						//unsigned char tilesetsUsed;
-						//fread(&tilesetsUsed, sizeof(char), 1, file);
-						//fread(&layer->tilesets[0], tilesetsUsed*sizeof(short), 1, file);
-
-	///* For maximum speed, we copy the tilesets into a local array */
-	///* That way we don't need to check if a tileset is within the range too */
-	//unsigned int tilesetCount = rdPtr->tilesets->size();
-	//if(tilesetCount > MAXTILESETS)
-	//	tilesetCount = MAXTILESETS;
-	//Tileset* tilesets[MAXTILESETS] = {0};
-	//for(unsigned int i = 0; i < tilesetCount; ++i)
-	//	tilesets[i] = &(*rdPtr->tilesets)[i];
-
-
-			///* Store this layer's local tilesets */
-			///* So we can quickly convert local to global tilesets */
-			//Tileset* localTilesets[128] = {0};
-			//for(unsigned int i = 0; i < 128; ++i)
-			//{
-			//	unsigned int globalTileset = layer->tilesets[i];
-			//	if(globalTileset >= 0 && globalTileset < tilesetCount)
-			//		localTilesets[i] = tilesets[globalTileset];
-			//}
-
-						///* Get the tileset's drawing settings */
-						//if(tile->tileset == 0 || tile->tileset > 128)
-						//	break;
-
-						///* IMPORTANT: Subtract one, see Tile.h */
-						//Tileset* tileset = tilesets[tile->tileset - 1]; //localTilesets[tile->tileset - 1];
-						//if(!tileset)
-						//	break;
