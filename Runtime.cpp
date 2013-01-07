@@ -34,6 +34,8 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	freopen("conout$","w", stdout);
 	freopen("conout$","w", stderr);
 
+	printf("TILEMAPVIEWPORT DEBUG MODE\n");
+
 #endif
 	
 	LPRH rhPtr = rdPtr->rHo.hoAdRunHeader;
@@ -46,24 +48,17 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	rdPtr->p = 0;
 
 	/* Create surface, get MMF depth.. */
-	cSurface* ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
+	cSurface *proto, *ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
 	rdPtr->depth = ps->GetDepth();
-	
-#ifndef HWABETA
-	if(edPtr->transparent)
-	{
-		rdPtr->surface = 0;
-	}
-	else
-	{
-		cSurface *proto;
-		GetSurfacePrototype(&proto, rdPtr->depth, SURFACE_TYPE, SURFACE_DRIVER);
+	GetSurfacePrototype(&proto, rdPtr->depth, SURF_TYPE, SURF_DRIVER);
 
+	rdPtr->surface = 0;
+#ifndef HWABETA
+	if(!edPtr->transparent)
+	{
 		rdPtr->surface = new cSurface;
 		rdPtr->surface->Create(rdPtr->rHo.hoImgWidth, rdPtr->rHo.hoImgHeight, proto);
 	}
-#else
-		rdPtr->surface = 0;
 #endif
 
 	/* Background settings */
@@ -76,6 +71,9 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 
 	/* Misc */
 	rdPtr->outsideColl = edPtr->outsideColl;
+	rdPtr->fineColl = edPtr->fineColl;
+	rdPtr->callback.borderX = 0;
+	rdPtr->callback.borderY = 0;
 
 	/* Camera/drawing */
 	rdPtr->cameraX = 0;
@@ -96,13 +94,11 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 // 
 short WINAPI DLLExport DestroyRunObject(LPRDATA rdPtr, long fast)
 {
-	/* Detach from tile map */
-	if(rdPtr->p)
-	{
-		rdPtr->p->viewports->remove(rdPtr);
-	}
-	
+	/* TM will detach this viewport anyway! */
+
 	delete rdPtr->surface;
+
+	// No errors
 	delete rdPtr->rRd;
 	return 0;
 }
@@ -117,6 +113,10 @@ short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 	/* We redraw every frame if callbacks are enabled */
 	if(rdPtr->callback.use)
 		rdPtr->rc.rcChanged = true;
+
+	/* Unlink if deleted */
+	if(rdPtr->p && rdPtr->p->rHo.hoFlags & HOF_DESTROYED)
+		rdPtr->p = 0;
 
 	return rdPtr->rc.rcChanged ? REFLAG_DISPLAY : 0;
 }
@@ -162,17 +162,13 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	/* Get output surface */
 	cSurface* ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
 	cSurface* target = tempSurf ? rdPtr->surface : ps;
-
 	if(!target)
 		return 0;
-	
-	/* Set on-screen clipping rectangle */
+
+	/* Prepare clipping (if no temp surface) */
 	if(!tempSurf)
 		target->SetClipRect(x, y, width, height);
-	/* Resize output surface */
-	else if(target->GetWidth() != width || target->GetHeight() != height)
-		target->Create(width, height, ps);
-
+	
 	/* Clear background */
 	if(!rdPtr->transparent)
 		target->Fill(rdPtr->background);
@@ -200,7 +196,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			/* Get tileset */
 			if(layer->tileset >= rdPtr->p->tilesets->size())
 				continue;
-			Tileset* tileset = &(*rdPtr->p->tilesets)[layer->tileset];
+			Tileset* tileset = &(*rdPtr->p->tilesets)[layer->tileset];	
 
 			/* Get the associated tileset image */
 			cSurface* tileSurf = tileset->surface;
@@ -229,22 +225,26 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			int x2 = lW;
 			int y2 = lH;
 
+			/* Additional tiles to render outside of the visible area */
+			int borderX = 1 + (rdPtr->callback.use ? rdPtr->callback.borderX : 0);
+			int borderY = 1 + (rdPtr->callback.use ? rdPtr->callback.borderY : 0);
+
 			/* Optimize drawing region */
-			while(tlX <= -tW)
+			while(tlX <= -tW*borderX)
 			{
 				tlX += tW;
 				x1++;
 			}
-			while(tlY <= -tH)
+			while(tlY <= -tH*borderY)
 			{
 				tlY += tH;
 				y1++;
 			}
-			while(tlX + (x2-x1)*tW >= width + tW)
+			while(tlX + (x2-x1)*tW >= width + tW*borderX)
 			{
 				x2--;
 			}
-			while(tlY + (y2-y1)*tH >= height + tH)
+			while(tlY + (y2-y1)*tH >= height + tH*borderY)
 			{
 				y2--;
 			}
@@ -252,30 +252,30 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			/* Wrapping */
 			if(layer->wrapX)
 			{
-				while(tlX > 0)
+				while(tlX > -tW*(borderX-1))
 				{
 					tlX -= tW;
 					x1--;
 				}
-				while(tlX + (x2-x1)*tW  < width)
+				while(tlX + (x2-x1-borderX+1)*tW  < width)
 				{
 					x2++;
 				}
 			}
 			if(layer->wrapY)
 			{
-				while(tlY > 0)
+				while(tlY > -tH*(borderY-1))
 				{
 					tlY -= tH;
 					y1--;
 				}
-				while(tlY + (y2-y1)*tH < height)
+				while(tlY + (y2-y1-borderY+1)*tH < height)
 				{
 					y2++;
 				}
 			}
 
-			/* Draw directly to screen, add on-screen offset */
+			/* Draw to screen: Add on-screen offset */
 			if(!tempSurf)
 			{
 				tlX += x;
@@ -294,7 +294,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 				{
 					int screenX = tlX;
 					for(int x = x1; x < x2; ++x)
-					{	
+					{
 						/* Wrap (if possible anyway) */
 						int tX = (x % lW + lW) % lW;
 						int tY = (y % lH + lH) % lH;
@@ -338,11 +338,12 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							}
 
 							/* Blit from the surface of the tileset with the tile's index in the layer tilesets */
-#ifdef HWABETA
-							tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, /*3.0, 3.0,*/ tile->x*tW, tile->y*tH, tW, tH, /*&center, angle,*/ BMODE_TRANSP, blitOp, blitParam);//, STRF_RESAMPLE);
-#else
+//#ifdef HWABETA
+//							POINT center = {0, 0};
+//							tileSurf->BlitEx(*target, screenX+offsetX, screenY+offsetY, 1, 1, tile->x*tW, tile->y*tH, tW, tH, &center, 0, BMODE_TRANSP, blitOp, blitParam);
+//#else
 							tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
-#endif
+//#endif
 						}
 						while(0);
 
@@ -357,13 +358,15 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		}
 	}
 
-	/* Finish up */
-	if(!tempSurf)
-		ps->ClearClipRect();
-	else
+	/* Finally, blit the whole image */
+	if(tempSurf)
 	{
 		rdPtr->surface->Blit(*ps, x, y, BMODE_OPAQUE,
 			BlitOp(rdPtr->rs.rsEffect & EFFECT_MASK), rdPtr->rs.rsEffectParam, 0);
+	}
+	else
+	{
+		target->ClearClipRect();
 	}
 
 	/* Update window region */
@@ -703,7 +706,7 @@ void WINAPI DLLExport EditDebugItem(LPRDATA rdPtr, int id)
 
 
 
-long ProcessCondition(LPRDATA rdPtr, long param1, long param2, long (*myFunc)(LPRDATA, LPHO, long))
+long ProcessCondition(LPRDATA rdPtr, long param1, long param2, bool (*myFunc)(LPRDATA, LPHO, long))
 {
 	short p1 = ((eventParam*)param1)->evp.evpW.evpW0;
 	
