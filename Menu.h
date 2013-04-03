@@ -32,10 +32,13 @@
 		SEPARATOR
 	SUB_END
 	SUB_START("On tile")
+		ITEM(11, "Set opacity")
 		ITEM(3, "Set offset")
 		ITEM(6, "Set tile")
 		SEPARATOR
 		SUB_START("HWA only")
+			ITEM(12, "Set tint")
+			SEPARATOR
 			ITEM(8, "Set angle")
 			ITEM(9, "Set X scale")
 			ITEM(10, "Set Y scale")

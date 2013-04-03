@@ -210,10 +210,6 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			cSurface* tileSurf = tileset->surface;
 			if(!tileSurf)
 				continue;
-			
-			/* Calculate opacity values */
-			BlitOp blitOp = layer->opacity < 0.999 ? BOP_BLEND : BOP_COPY;
-			int blitParam = 128 - int(layer->opacity*128.0);
 
 			/* Store the layer size */
 			int lW = layer->width;
@@ -314,6 +310,11 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							if(tile->x == 0xff || tile->y == 0xff)
 								break;
 
+							/* Determine tile opacity */
+							BlitOp blitOp = layer->opacity < 0.999 ? BOP_BLEND : BOP_COPY;
+							float opacity = layer->opacity;
+							LPARAM blitParam = 128 - int(opacity * 128);
+
 							/* We use callbacks, so let the programmer do stuff */
 							if(rdPtr->callback.use)
 							{
@@ -323,10 +324,12 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
 								/* Reset some values */
 								rdPtr->callback.visible = true;
+								rdPtr->callback.opacity = 1.0;
 								rdPtr->callback.offsetX = 0;
 								rdPtr->callback.offsetY = 0;
 
 								/* HWA specific */
+								rdPtr->callback.tint = WHITE;
 								rdPtr->callback.transform = false;
 								rdPtr->callback.scaleX = 1.0f;
 								rdPtr->callback.scaleY = 1.0f;
@@ -346,6 +349,23 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								/* Apply offset */
 								offsetX = rdPtr->callback.offsetX;
 								offsetY = rdPtr->callback.offsetY;
+
+								/* Apply opacity */
+								opacity *= rdPtr->callback.opacity;
+
+								/* Compute blit operation */
+								if(rdPtr->callback.tint != WHITE)
+								{
+									blitOp = BOP_RGBAFILTER;
+									int rgb = rdPtr->callback.tint & 0xffffff;
+									rgb = ((rgb & 0xff) << 16) | (rgb & 0xff00) | ((rgb & 0xff0000) >> 16);
+									blitParam = rgb | (int(opacity * 255) << 24);
+								}
+								else if (opacity < 0.999)
+								{
+									blitOp = BOP_BLEND;
+									blitParam = 128 - int(opacity * 128);
+								}
 							}
 
 							/* Blit from the surface of the tileset with the tile's index in the layer tilesets */
@@ -363,7 +383,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
 								POINT center = {tW/2, tH/2};
 								tileSurf->BlitEx(*target, screenX+offsetX, screenY+offsetY, scaleX, scaleY, tile->x*tW, tile->y*tH, tW, tH,
-									&center, angle, BMODE_TRANSP, BOP_RGBAFILTER, 0xff0080cc); //blitOp, blitParam);
+									&center, angle, BMODE_TRANSP, blitOp, blitParam);
 							}
 #endif
 

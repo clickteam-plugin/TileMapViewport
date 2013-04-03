@@ -358,7 +358,7 @@ ACTION(
 	/* ID */			8,
 	/* Name */			"Set callback tile angle to %0",
 	/* Flags */			0,
-	/* Params */		(1, PARAM_NUMBER,"Angle")
+	/* Params */		(1, PARAM_NUMBER,"Angle (0-360)")
 ) {
 #ifdef HWABETA
 	rdPtr->callback.transform = true;
@@ -390,6 +390,23 @@ ACTION(
 #endif
 }
 
+ACTION(
+	/* ID */			11,
+	/* Name */			"Set callback tile opacity to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Opacity (0-1, 1 = Default)")
+) {
+	rdPtr->callback.opacity = fltParam();
+}
+
+ACTION(
+	/* ID */			12,
+	/* Name */			"Set callback tile tint to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_COLOUR, "Tint (White = Default)")
+) {
+	rdPtr->callback.tint = anyParam();
+}
 
 
 // ============================================================================

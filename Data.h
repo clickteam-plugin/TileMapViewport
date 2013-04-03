@@ -82,11 +82,13 @@ struct RUNDATA
 
 		/* Data that can be modified */
 		bool		visible;
+		float		opacity;
 		int			offsetX;
 		int			offsetY;
 		Tile		tile;
 
 		/* HWA specific */
+		COLORREF	tint;
 		bool		transform;
 		float		scaleX;
 		float		scaleY;
