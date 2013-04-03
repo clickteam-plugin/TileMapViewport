@@ -45,14 +45,6 @@ inline int getLayerY(LPRDATA rdPtr, Layer* layer)
 	return (int)((layer->offsetY - rdPtr->cameraY) * layer->scrollY);
 }
 
-inline int floordiv(int x, int d)
-{
-	if(x >= 0)
-		return x/d;
-
-	return -((-x)/d);
-}
-
 long ProcessCondition(LPRDATA rdPtr, long param1, long param2, long (*myFunc)(LPRDATA, LPHO, long));
 inline float __getFloat(LPRDATA rdPtr) { int foo = CNC_GetFloatParameter(rdPtr); return *(float*)&foo; }
 

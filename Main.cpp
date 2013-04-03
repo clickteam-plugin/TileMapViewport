@@ -13,6 +13,22 @@ using namespace Riggs;
 // 
 // ============================================================================
 
+/* Divide x by d, round towards -infinity, always */
+inline int floordiv(int x, int d)
+{
+	/* Various solutions from the Internet didn't work. This one makes sense and the efficiency is negligible */
+	if(x < 0)
+	{
+		int unaligned = x;
+		x = 0;
+
+		while(x > unaligned)
+			x -= d;
+	}
+
+	return x / d;
+}
+
 bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 {
 	if(!rdPtr->p)
@@ -94,6 +110,12 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	int y1 = floordiv(objY1 - tlY, tileHeight);
 	int x2 = floordiv(objX2 - tlX - 1, tileWidth);
 	int y2 = floordiv(objY2 - tlY - 1, tileHeight);
+
+	printf("%d,%d -> %d,%d\n", x1, y1, x2, y2);
+
+	/* Nothing to do if the object is not within the tile area */
+	if(x2 < 0 || y2 < 0)
+		return false;
 
 	/* Ensure that the tiles are in the layer */
 	int width = layer->width;
