@@ -111,8 +111,6 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	int x2 = floordiv(objX2 - tlX - 1, tileWidth);
 	int y2 = floordiv(objY2 - tlY - 1, tileHeight);
 
-	printf("%d,%d -> %d,%d\n", x1, y1, x2, y2);
-
 	/* Nothing to do if the object is not within the tile area */
 	if(x2 < 0 || y2 < 0)
 		return false;
