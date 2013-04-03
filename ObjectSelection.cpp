@@ -1,24 +1,31 @@
-#include "ObjectSelection.h"
+// By Anders Riggelsen (Andos)
+// http://www.clickteam.com/epicenter/ubbthreads.php?ubb=showflat&Number=214148&gonew=1
 
+// These files do not match up with the originals - modified for Edif (callbacks inside the extension class, etc..)
 
-ObjectSelection::ObjectSelection(LPRH rhPtr)
+#include "Common.h"
+
+Riggs::ObjectSelection::ObjectSelection(LPRH rhPtr)
 {
 	this->rhPtr = rhPtr;
 	this->ObjectList = rhPtr->rhObjectList;		//get a pointer to the mmf object list
 	this->OiList = rhPtr->rhOiList;				//get a pointer to the mmf object info list
 	this->QualToOiList = rhPtr->rhQualToOiList;	//get a pointer to the mmf qualifier to Oi list
-
-	rhPtr->rh4.rh4Mv->mvCallFunction(NULL, EF_ISHWA, 0, 0, 0);
-
 	oiListItemSize = sizeof(objInfoList);
+
+//Only add the sizes to the runtime structures if they weren't compiled directly for those runtimes
+#ifndef UNICODE
 	if ( rhPtr->rh4.rh4Mv->mvCallFunction(NULL, EF_ISUNICODE, 0, 0, 0) )
 		oiListItemSize += 24;
+#endif
+#ifndef HWABETA
 	if ( rhPtr->rh4.rh4Mv->mvCallFunction(NULL, EF_ISHWA, 0, 0, 0) )
 		oiListItemSize += sizeof(LPVOID);
+#endif
 }
 
 //Selects *all* objects of the given object-type
-void ObjectSelection::SelectAll(short Oi)
+void Riggs::ObjectSelection::SelectAll(short Oi)
 {
 	const LPOIL pObjectInfo = GetOILFromOI(Oi);
 
@@ -36,7 +43,7 @@ void ObjectSelection::SelectAll(short Oi)
 }
 
 //Resets all objects of the given object-type
-void ObjectSelection::SelectNone(short Oi)
+void Riggs::ObjectSelection::SelectNone(short Oi)
 {
 	LPOIL pObjectInfo = GetOILFromOI(Oi);
 
@@ -46,7 +53,7 @@ void ObjectSelection::SelectNone(short Oi)
 }
 
 //Resets the SOL and inserts only one given object
-void ObjectSelection::SelectOneObject(LPRO object)
+void Riggs::ObjectSelection::SelectOneObject(LPRO object)
 {
 	LPOIL pObjectInfo = GetOILFromOI(object->roHo.hoOi);
 
@@ -57,7 +64,7 @@ void ObjectSelection::SelectOneObject(LPRO object)
 }
 
 //Resets the SOL and inserts the given list of objects
-void ObjectSelection::SelectObjects(short Oi, LPRO* objects, int count)
+void Riggs::ObjectSelection::SelectObjects(short Oi, LPRO* objects, int count)
 {
 	if(count <= 0)
 		return;
@@ -79,85 +86,8 @@ void ObjectSelection::SelectObjects(short Oi, LPRO* objects, int count)
 	ObjectList[prevNumber].oblOffset->hoNextSelected = -1;
 }
 
-
-//Run a custom filter on the SOL (via function callback)
-bool ObjectSelection::FilterObjects(LPRDATA rdPtr, short Oi, bool negate, bool (*filterFunction)(LPRDATA, LPRO))
-{
-	if(Oi & 0x8000)
-		return FilterQualifierObjects(rdPtr, Oi & 0x7FFF, negate, filterFunction) ^ negate;
-	else
-		return FilterNonQualifierObjects(rdPtr, Oi, negate, filterFunction) ^ negate;
-}
-
-
-//Filter qualifier objects
-bool ObjectSelection::FilterQualifierObjects(LPRDATA rdPtr, short Oi, bool negate, bool (*filterFunction)(LPRDATA, LPRO))
-{
-	LPQOI CurrentQualToOiStart = (LPQOI)((char*)QualToOiList + Oi);
-	LPQOI CurrentQualToOi = CurrentQualToOiStart;
-
-	bool hasSelected = false;
-
-	while(CurrentQualToOi->qoiOiList >= 0)
-	{
-		LPOIL CurrentOi = GetOILFromOI(CurrentQualToOi->qoiOiList);
-		hasSelected |= FilterNonQualifierObjects(rdPtr, CurrentOi->oilOi, negate, filterFunction);
-		CurrentQualToOi = (LPQOI)((char*)CurrentQualToOi + 4);
-	}
-	return hasSelected;
-}
-
-//Filter normal objects
-bool ObjectSelection::FilterNonQualifierObjects(LPRDATA rdPtr, short Oi, bool negate, bool (*filterFunction)(LPRDATA, LPRO))
-{
-	LPOIL pObjectInfo = GetOILFromOI(Oi);
-	bool hasSelected = false;
-
-	if(!pObjectInfo)
-		return false;
-
-	if(pObjectInfo->oilEventCount != rhPtr->rh2.rh2EventCount)
-		SelectAll(Oi);	//The SOL is invalid, must reset.
-
-	//If SOL is empty
-	if(pObjectInfo->oilNumOfSelected <= 0)
-		return false;
-
-	int firstSelected = -1;
-	int count = 0;
-	int current = pObjectInfo->oilListSelected;
-	LPHO previous = NULL;
-
-	while(current >= 0)
-	{
-		LPHO pObject = ObjectList[current].oblOffset;
-		bool useObject = filterFunction(rdPtr, (LPRO)pObject) ^ negate;
-		hasSelected |= useObject;
-
-		if(useObject)
-		{
-			if(firstSelected == -1)
-				firstSelected = current;
-
-			if(previous != NULL)
-				previous->hoNextSelected = current;
-			
-			previous = pObject;
-			count++;
-		}
-		current = pObject->hoNextSelected;
-	}
-	if(previous != NULL)
-		previous->hoNextSelected = -1;
-
-	pObjectInfo->oilListSelected = firstSelected;
-	pObjectInfo->oilNumOfSelected = count;
-
-	return hasSelected;
-}
-
 //Return the number of selected objects for the given object-type
-int ObjectSelection::GetNumberOfSelected(short Oi)
+int Riggs::ObjectSelection::GetNumberOfSelected(short Oi)
 {
 	if(Oi & 0x8000)
 	{
@@ -182,7 +112,7 @@ int ObjectSelection::GetNumberOfSelected(short Oi)
 	}
 }
 
-bool ObjectSelection::ObjectIsOfType(LPRO object, short Oi)
+bool Riggs::ObjectSelection::ObjectIsOfType(LPRO object, short Oi)
 {
 	if(Oi & 0x8000)
 	{
@@ -205,7 +135,7 @@ bool ObjectSelection::ObjectIsOfType(LPRO object, short Oi)
 
 
 //Returns the object-info structure from a given object-type
-LPOIL ObjectSelection::GetOILFromOI(short Oi)
+LPOIL Riggs::ObjectSelection::GetOILFromOI(short Oi)
 {
 	for(int i=0; i<rhPtr->rhNumberOi; ++i)
 	{
@@ -215,4 +145,3 @@ LPOIL ObjectSelection::GetOILFromOI(short Oi)
 	}
 	return NULL;
 }
-

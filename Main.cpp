@@ -5,6 +5,7 @@
 // ============================================================================
 
 #include "common.h"
+using namespace Riggs;
 
 // ============================================================================
 //
@@ -26,7 +27,8 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	/* Get layer's collision tileset */
 	unsigned char tilesetID = (layer->collision != 0xff) ? layer->collision : layer->tileset;
 	if(tilesetID >= rdPtr->p->tilesets->size())
-		return 0;
+		return false;
+
 	Tileset* tileset = &(*rdPtr->p->tilesets)[tilesetID];
 
 	/* Get tileset's settings */
@@ -172,7 +174,7 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 		}
 	}
 
-	return 0;
+	return false;
 }
 
 CONDITION(
@@ -194,6 +196,7 @@ CONDITION(
 		return false;
 
 	ObjectSelection select = ObjectSelection(rdPtr->rHo.hoAdRunHeader);
+	select.rdPtr = rdPtr;
 
 	/* Gets a pointer to the event information structure and find out if the condition is negated */
 	PEVT pe = (PEVT)(((LPBYTE)param1)-CND_SIZE);
@@ -201,7 +204,7 @@ CONDITION(
 	short oi = ((eventParam*)param1)->evp.evpW.evpW0;
 
 	rdPtr->cndLayer = layer;
-	return select.FilterObjects(rdPtr, oi, isNegated, cndObjOverlapsLayer);
+	return select.FilterObjects(oi, isNegated, cndObjOverlapsLayer);
 }
 
 CONDITION(

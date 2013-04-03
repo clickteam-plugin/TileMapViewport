@@ -34,8 +34,14 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	freopen("conout$","w", stdout);
 	freopen("conout$","w", stderr);
 
-	printf("TILEMAPVIEWPORT DEBUG MODE\n");
+	printf("TILEMAPVIEWPORT DEBUG MODE");
 
+#ifdef HWABETA
+	printf(" (HWA)");
+
+#endif
+
+	printf("\n");
 #endif
 	
 	LPRH rhPtr = rdPtr->rHo.hoAdRunHeader;
@@ -338,6 +344,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							}
 
 							/* Blit from the surface of the tileset with the tile's index in the layer tilesets */
+							//target->Fill(screenX+offsetX, screenY+offsetY, tW, tH, RED);
 							tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
 						}
 						while(0);

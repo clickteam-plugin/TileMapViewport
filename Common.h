@@ -33,6 +33,8 @@ using namespace std;
 #include	"ObjectSelection.h"
 #include	"rTemplate.h"
 
+#include	"ObjectSelection.h"
+
 inline int getLayerX(LPRDATA rdPtr, Layer* layer)
 {
 	return (int)((layer->offsetX - rdPtr->cameraX) * layer->scrollX);
