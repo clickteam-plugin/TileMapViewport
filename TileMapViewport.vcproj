@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9,00"
 	Name="TileMapViewport"
-	ProjectGUID="{603A2407-CFD4-437F-A3C0-1CA0E67F8556}"
+	ProjectGUID="{6F17931E-377D-481D-AB1B-8A316017F723}"
 	TargetFrameworkVersion="0"
 	>
 	<Platforms>
@@ -48,7 +48,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
+				AdditionalIncludeDirectories="..\..\Inc"
 				PreprocessorDefinitions="NDEBUG;RUN_ONLY;COMPILE_SMALL;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -145,7 +145,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
+				AdditionalIncludeDirectories="..\..\Inc"
 				PreprocessorDefinitions="NDEBUG;RUN_ONLY;VITALIZE;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -241,7 +241,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
+				AdditionalIncludeDirectories="..\..\Inc"
 				PreprocessorDefinitions="NDEBUG;RUN_ONLY;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -336,7 +336,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
+				AdditionalIncludeDirectories="..\..\Inc"
 				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -434,7 +434,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
+				AdditionalIncludeDirectories="..\..\Inc"
 				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -531,7 +531,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
+				AdditionalIncludeDirectories="..\..\Inc"
 				PreprocessorDefinitions="NDEBUG;RUN_ONLY;COMPILE_SMALL;VITALIZE;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -628,7 +628,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
+				AdditionalIncludeDirectories="..\..\Inc"
 				PreprocessorDefinitions="NDEBUG;COMPILE_SMALL;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -724,7 +724,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
+				AdditionalIncludeDirectories="..\..\Inc"
 				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK;HWABETA"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -822,7 +822,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
+				AdditionalIncludeDirectories="..\..\Inc"
 				PreprocessorDefinitions="NDEBUG;HWABETA;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -919,7 +919,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
+				AdditionalIncludeDirectories="..\..\Inc"
 				PreprocessorDefinitions="NDEBUG;HWABETA;RUN_ONLY;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -1519,6 +1519,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Layer.h"
+				>
+			</File>
+			<File
 				RelativePath="Menu.h"
 				>
 				<FileConfiguration
@@ -1572,6 +1576,14 @@
 			</File>
 			<File
 				RelativePath=".\ObjectSelection.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Tile.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Tileset.h"
 				>
 			</File>
 		</Filter>
