@@ -363,7 +363,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
 								POINT center = {tW/2, tH/2};
 								tileSurf->BlitEx(*target, screenX+offsetX, screenY+offsetY, scaleX, scaleY, tile->x*tW, tile->y*tH, tW, tH,
-									&center, angle, BMODE_TRANSP, blitOp, blitParam);
+									&center, angle, BMODE_TRANSP, BOP_RGBAFILTER, 0xff0080cc); //blitOp, blitParam);
 							}
 #endif
 
