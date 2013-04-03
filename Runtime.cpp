@@ -177,15 +177,9 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	if(!target)
 		return 0;
 
-	/* Prepare clipping (if no temp surface) */
-	//if(!tempSurf)
-	//	target->SetClipRect(x, y, width, height);
-	
 	/* Clear background */
 	if(!rdPtr->transparent)
 		target->Fill(rdPtr->background);
-
-	ps->Fill(vX, vY, width, height, RED);
 
 	/* For all wanted layers...*/
 	int layerCount = rdPtr->p->layers->size();
@@ -417,13 +411,9 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		rdPtr->surface->Blit(*ps, vX, vY, BMODE_OPAQUE,
 			BlitOp(rdPtr->rs.rsEffect & EFFECT_MASK), rdPtr->rs.rsEffectParam, 0);
 	}
-	else
-	{
-		//target->ClearClipRect();
-	}
 
 	/* Update window region */
-	//WinAddZone(rdPtr->rHo.hoAdRunHeader->rhIdEditWin, &rdPtr->rHo.hoRect);
+	WinAddZone(rdPtr->rHo.hoAdRunHeader->rhIdEditWin, &rdPtr->rHo.hoRect);
 
 	return 0;
 }
