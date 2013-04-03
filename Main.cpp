@@ -111,13 +111,17 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	int x2 = floordiv(objX2 - tlX - 1, tileWidth);
 	int y2 = floordiv(objY2 - tlY - 1, tileHeight);
 
-	/* Nothing to do if the object is not within the tile area */
-	if(x2 < 0 || y2 < 0)
-		return false;
 
 	/* Ensure that the tiles are in the layer */
 	int width = layer->width;
 	int height = layer->height;
+
+
+	/* Nothing to do if the object is not within the tile area */
+	if(x1 >= width || y1 >= height || x2 < 0 || y2 < 0)
+		return false;
+
+	/* Limit candidates to possibly overlapping tiles */
 	x1 = max(0, x1);
 	x2 = min(width-1, x2);
 	y1 = max(0, y1);
