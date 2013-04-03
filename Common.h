@@ -13,16 +13,6 @@
 #pragma		comment(lib, "shlwapi.lib")
 using namespace std;
 
-#define MAXTILESETS	100
-
-#ifdef	HWABETA
-#define SURF_DRIVER	SD_D3D9
-#define SURF_TYPE	ST_HWA_RTTEXTURE
-#else
-#define SURF_DRIVER	SD_DIB
-#define SURF_TYPE	ST_MEMORY
-#endif
-
 #include	"Resource.h"
 #include	"FlagsPrefs.h"
 #include	"Information.h"
@@ -44,15 +34,6 @@ inline int getLayerY(LPRDATA rdPtr, Layer* layer)
 {
 	return (int)((layer->offsetY - rdPtr->cameraY) * layer->scrollY);
 }
-
-long ProcessCondition(LPRDATA rdPtr, long param1, long param2, long (*myFunc)(LPRDATA, LPHO, long));
-inline float __getFloat(LPRDATA rdPtr) { int foo = CNC_GetFloatParameter(rdPtr); return *(float*)&foo; }
-
-#define intParam() CNC_GetIntParameter(rdPtr)
-#define strParam() (const char*)CNC_GetStringParameter(rdPtr)
-#define fltParam() __getFloat(rdPtr)
-#define objParam() CNC_GetParameter(rdPtr)
-#define anyParam() CNC_GetParameter(rdPtr)
 
 // Globals and prototypes
 extern HINSTANCE hInstLib;

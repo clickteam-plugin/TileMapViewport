@@ -54,22 +54,29 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	rdPtr->p = 0;
 
 	/* Create surface, get MMF depth.. */
-	cSurface *proto, *ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
+	cSurface* ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
 	rdPtr->depth = ps->GetDepth();
-	GetSurfacePrototype(&proto, rdPtr->depth, SURF_TYPE, SURF_DRIVER);
 
 	rdPtr->surface = 0;
+
 #ifndef HWABETA
+
+	/*	Non-transparent surfaces are rendered to an opaque viewport surface so that
+		the tiles do not have to be redrawn every single frame.						*/
 	if(!edPtr->transparent)
 	{
+		cSurface* proto;
+		GetSurfacePrototype(&proto, rdPtr->depth, ST_MEMORY, SD_DIB);
 		rdPtr->surface = new cSurface;
 		rdPtr->surface->Create(rdPtr->rHo.hoImgWidth, rdPtr->rHo.hoImgHeight, proto);
 	}
+
 #endif
 
 	/* Background settings */
 	rdPtr->transparent = edPtr->transparent;
 	rdPtr->background = edPtr->background;
+	rdPtr->accurateClip = edPtr->accurateClip;
 
 	/* Layer stuff */
 	rdPtr->minLayer = edPtr->minLayer;
@@ -153,17 +160,16 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		return 0;
 
 	/* On-screen coords */
-	int x = rdPtr->rHo.hoRect.left;
-	int y = rdPtr->rHo.hoRect.top;
+	int vX = rdPtr->rHo.hoRect.left;
+	int vY = rdPtr->rHo.hoRect.top;
 	int width = rdPtr->rHo.hoImgWidth;
 	int height = rdPtr->rHo.hoImgHeight;
 
 	/* Whether or not we use a temporary surface (-> coordinate shifting) */
-#ifdef HWABETA
-	bool tempSurf = false;
-#else
-	bool tempSurf = !rdPtr->transparent;
-#endif
+	bool tempSurf = rdPtr->surface != 0;
+
+	/* Whether we have to perform pixel clipping on blitted tiles */
+	bool clip = !tempSurf && rdPtr->accurateClip;
 
 	/* Get output surface */
 	cSurface* ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
@@ -172,12 +178,14 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		return 0;
 
 	/* Prepare clipping (if no temp surface) */
-	if(!tempSurf)
-		target->SetClipRect(x, y, width, height);
+	//if(!tempSurf)
+	//	target->SetClipRect(x, y, width, height);
 	
 	/* Clear background */
 	if(!rdPtr->transparent)
 		target->Fill(rdPtr->background);
+
+	ps->Fill(vX, vY, width, height, RED);
 
 	/* For all wanted layers...*/
 	int layerCount = rdPtr->p->layers->size();
@@ -282,11 +290,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			}
 
 			/* Draw to screen: Add on-screen offset */
-			if(!tempSurf)
-			{
-				tlX += x;
-				tlY += y;
-			}
+			int onScreenX = tlX + (tempSurf ? 0 : vX);
+			int onScreenY = tlY + (tempSurf ? 0 : vY);
 
 			/* If can render */
 			if(x2-x1 > 0 && y2-y1 > 0)
@@ -295,10 +300,10 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 				int offsetX = 0, offsetY = 0;
 
 				/* For every visible tile... */
-				int screenY = tlY;
+				int screenY = onScreenY;
 				for(int y = y1; y < y2; ++y)
 				{
-					int screenX = tlX;
+					int screenX = onScreenX;
 					for(int x = x1; x < x2; ++x)
 					{
 						/* Wrap (if possible anyway) */
@@ -344,8 +349,54 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							}
 
 							/* Blit from the surface of the tileset with the tile's index in the layer tilesets */
-							//target->Fill(screenX+offsetX, screenY+offsetY, tW, tH, RED);
-							tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
+							if(!clip)
+							{
+								tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
+							}
+							/* Before blitting, perform clipping so that we won't draw outside of the viewport... */
+							else
+							{
+								int dX, dY, sX, sY, sW, sH;
+								dX = screenX + offsetX - vX;
+								dY = screenY + offsetY - vY;
+								sX = tile->x*tW;
+								sY = tile->y*tH;
+								sW = tW;
+								sH = tH;
+
+								/* Clip left */
+								if(dX < 0)
+								{
+									sX -= dX;
+									sW += dX;
+									dX = 0;
+								}
+
+								/* Clip top */
+								if(dY < 0)
+								{
+									sY -= dY;
+									sH += dY;
+									dY = 0;
+								}
+								
+								/* Clip right */
+								if(dX + sW > width)
+									sW -= tW - (width-dX);
+
+								/* Clip bottom */
+								if(dY + sH > height)
+									sH -= tH - (height-dY);
+
+								if(dX < width && dY < height && sW > 0 && sH > 0)
+								{
+									/* Apply viewport position */
+									dX += vX;
+									dY += vY;
+
+									tileSurf->Blit(*target, dX, dY, sX, sY, sW, sH, BMODE_TRANSP, blitOp, blitParam);
+								}
+							}
 						}
 						while(0);
 
@@ -363,16 +414,16 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	/* Finish up */
 	if(tempSurf)
 	{
-		rdPtr->surface->Blit(*ps, x, y, BMODE_OPAQUE,
+		rdPtr->surface->Blit(*ps, vX, vY, BMODE_OPAQUE,
 			BlitOp(rdPtr->rs.rsEffect & EFFECT_MASK), rdPtr->rs.rsEffectParam, 0);
 	}
 	else
 	{
-		target->ClearClipRect();
+		//target->ClearClipRect();
 	}
 
 	/* Update window region */
-	WinAddZone(rdPtr->rHo.hoAdRunHeader->rhIdEditWin, &rdPtr->rHo.hoRect);
+	//WinAddZone(rdPtr->rHo.hoAdRunHeader->rhIdEditWin, &rdPtr->rHo.hoRect);
 
 	return 0;
 }

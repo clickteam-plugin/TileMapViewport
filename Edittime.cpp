@@ -18,6 +18,7 @@ PROPS_IDS_START()
 	PROPID_GRP_DISPLAY,
 	PROPID_AUTOSCROLL,
 	PROPID_TRANSPARENT,
+	PROPID_ACCURATECLIP,
 	//PROPID_TRANSPCOLOR,
 	PROPID_BGCOLOR,
 
@@ -35,7 +36,8 @@ PROPS_DATA_START()
 
 
 	PropData_Group(PROPID_GRP_DISPLAY, (int)"Display", (int)""),
-	PropData_CheckBox(PROPID_TRANSPARENT, (int)"Transparent", (int)"Use with caution - a background may greatly increase the FPS, especially in HWA."),
+	PropData_CheckBox(PROPID_TRANSPARENT, (int)"Transparent", (int)"Use with caution - a background may greatly increase the FPS."),
+	PropData_CheckBox(PROPID_ACCURATECLIP, (int)"Accurate clipping", (int)"Disable accurate clipping of tiles within the viewport area. Disabling may increase FPS. If your viewport covers the whole screen, you can safely turn this off."),
 	PropData_CheckBox(PROPID_AUTOSCROLL, (int)"Follow MMF camera", (int)"The Tile Map automatically follows the MMF camera."),
 
 	PropData_Group(PROPID_GRP_COLL, (int)"Collisions", (int)""),
@@ -194,6 +196,8 @@ BOOL WINAPI DLLExport GetPropCheck(LPMV mV, LPEDATA edPtr, UINT nPropID)
 			return edPtr->autoScroll;
 		case PROPID_TRANSPARENT:
 			return edPtr->transparent;
+		case PROPID_ACCURATECLIP:
+			return edPtr->accurateClip;
 		case PROPID_OUTSIDECOLL:
 			return edPtr->outsideColl;
 		case PROPID_FINECOLL:
@@ -275,6 +279,11 @@ void WINAPI DLLExport SetPropCheck(LPMV mV, LPEDATA edPtr, UINT nPropID, BOOL nC
 
 	case PROPID_FINECOLL:
 		edPtr->fineColl = nCheck ? true : false;
+		mvInvalidateObject(mV, edPtr);
+		break;
+
+	case PROPID_ACCURATECLIP:
+		edPtr->accurateClip = nCheck ? true : false;
 		mvInvalidateObject(mV, edPtr);
 		break;
 
@@ -563,6 +572,7 @@ int WINAPI DLLExport CreateObject(mv _far *mV, fpLevObj loPtr, LPEDATA edPtr)
 	edPtr->height = 480;
 
 	edPtr->transparent = false;
+	edPtr->accurateClip = true;
 	edPtr->background = 0xffffff;
 	//edPtr->transpColor = 0xff00ff;
 

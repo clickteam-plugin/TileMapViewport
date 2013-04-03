@@ -66,6 +66,7 @@ struct RUNDATA
 	bool			transparent;
 	COLORREF		background;
 	cSurface*		surface;
+	bool			accurateClip;
 
 	/* On collision */
 	Tile			collTile;
@@ -118,7 +119,8 @@ typedef struct tagEDATA_V1
 
 	bool			outsideColl : 1;
 	bool			fineColl : 1;
-	bool			__boolPadding : 6;
+	bool			accurateClip : 1;
+	bool			__boolPadding : 5;
 
 } EDITDATA;
 typedef EDITDATA * LPEDATA;
