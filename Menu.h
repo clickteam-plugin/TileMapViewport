@@ -26,6 +26,12 @@
 		SUB_START("On tile")
 			ITEM(3, "Set on-screen offset")
 			ITEM(6, "Set tile")
+			SEPARATOR
+			SUB_START("HWA only")
+				ITEM(8, "Set angle")
+				ITEM(9, "Set X scale")
+				ITEM(10, "Set Y scale")
+			SUB_END
 		SUB_END
 	SUB_END
 	SUB_START("Display")

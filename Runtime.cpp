@@ -178,7 +178,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		return 0;
 
 	/* Clear background */
-	if(!rdPtr->transparent)
+	if(!rdPtr->transparent && tempSurf)
 		target->Fill(rdPtr->background);
 
 	/* For all wanted layers...*/
@@ -326,6 +326,12 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								rdPtr->callback.offsetX = 0;
 								rdPtr->callback.offsetY = 0;
 
+								/* HWA specific */
+								rdPtr->callback.transform = false;
+								rdPtr->callback.scaleX = 1.0f;
+								rdPtr->callback.scaleY = 1.0f;
+								rdPtr->callback.angle = 0.0f;
+
 								/* Grant access to tile position */
 								rdPtr->callback.x = x;
 								rdPtr->callback.y = y;
@@ -347,6 +353,20 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							{
 								tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
 							}
+#ifdef HWABETA
+							/* HWA only: tile angle and scale on callback. Disables accurate clipping! */
+							else if(rdPtr->callback.transform)
+							{
+								float scaleX = rdPtr->callback.scaleX;
+								float scaleY = rdPtr->callback.scaleY;
+								float angle = rdPtr->callback.angle;
+
+								POINT center = {tW/2, tH/2};
+								tileSurf->BlitEx(*target, screenX+offsetX, screenY+offsetY, scaleX, scaleY, tile->x*tW, tile->y*tH, tW, tH,
+									&center, angle, BMODE_TRANSP, blitOp, blitParam);
+							}
+#endif
+
 							/* Before blitting, perform clipping so that we won't draw outside of the viewport... */
 							else
 							{

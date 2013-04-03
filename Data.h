@@ -86,6 +86,12 @@ struct RUNDATA
 		int			offsetY;
 		Tile		tile;
 
+		/* HWA specific */
+		bool		transform;
+		float		scaleX;
+		float		scaleY;
+		float		angle;
+
 		/* Get-only (for now?) */
 		int			x;
 		int			y;

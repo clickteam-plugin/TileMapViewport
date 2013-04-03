@@ -354,6 +354,43 @@ ACTION(
 	rdPtr->callback.borderY = max(0, min(1000, rdPtr->callback.borderY));
 }
 
+ACTION(
+	/* ID */			8,
+	/* Name */			"Set callback tile angle to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Angle")
+) {
+#ifdef HWABETA
+	rdPtr->callback.transform = true;
+	rdPtr->callback.angle = fltParam();
+#endif
+}
+
+ACTION(
+	/* ID */			9,
+	/* Name */			"Set callback tile X scale to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"X scale (1.0 = Default)")
+) {
+#ifdef HWABETA
+	rdPtr->callback.transform = true;
+	rdPtr->callback.scaleX = fltParam();
+#endif
+}
+
+ACTION(
+	/* ID */			10,
+	/* Name */			"Set callback tile Y scale to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Y scale (1.0 = Default)")
+) {
+#ifdef HWABETA
+	rdPtr->callback.transform = true;
+	rdPtr->callback.scaleY = fltParam();
+#endif
+}
+
+
 
 // ============================================================================
 //
