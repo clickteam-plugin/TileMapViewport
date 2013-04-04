@@ -29,13 +29,6 @@
 		ITEM(5, "Disable")
 		SEPARATOR
 		ITEM(7, "Set tile render overflow")
-		SEPARATOR
-		SUB_START("Trigger tile range")
-			ITEM(14, "Enable")
-			ITEM(15, "Disable")
-			SEPARATOR
-			ITEM(13, "Set")
-		SUB_END
 	SUB_END
 	SUB_START("On tile")
 		ITEM(11, "Set opacity")
