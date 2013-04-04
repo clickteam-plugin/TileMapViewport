@@ -60,13 +60,16 @@ struct RUNDATA
 	/* Misc. settings */
 	bool			outsideColl;
 	bool			fineColl;
-	Layer*			cndLayer;
 
 	/* Display surface */
 	bool			transparent;
 	COLORREF		background;
 	cSurface*		surface;
 	bool			accurateClip;
+
+	/* Overlaps condition */
+	Tileset*		cndTileset;
+	cSurface*		cndAlphaSurf;
 
 	/* On collision */
 	Tile			collTile;

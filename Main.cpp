@@ -6,7 +6,6 @@
 
 #include "Common.h"
 #include "Paramacro.h"
-using namespace Riggs;
 
 // ============================================================================
 //
@@ -30,30 +29,17 @@ inline int floordiv(int x, int d)
 	return x / d;
 }
 
-bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
+/* NOTE: Requires rdPtr->cndTileset to be set accordingly! */
+long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 {
 	if (!rdPtr->p)
 		return false;
 
-	Layer* layer = rdPtr->cndLayer;
-	if (!layer->isValid())
-		return false;
-
+	Layer* layer = (Layer*)layerParam;
 	LPHO obj = (LPHO)runObj;
+
+	Tileset* tileset = rdPtr->cndTileset;
 	
-	/* Get layer's collision tileset */
-	unsigned char tilesetID = (layer->collision != 0xff) ? layer->collision : layer->tileset;
-	if (tilesetID >= rdPtr->p->tilesets->size())
-		return false;
-
-	Tileset* tileset = &(*rdPtr->p->tilesets)[tilesetID];
-
-	/* Get tileset's settings */
-	cSurface* surface = tileset->surface;
-	if (!surface)
-		return false;
-	COLORREF transpCol = tileset->transpCol;
-
 	/* Store tile size (we'll need it often) */
 	int tileWidth = rdPtr->p->tileWidth;
 	int tileHeight = rdPtr->p->tileHeight;
@@ -134,6 +120,9 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	objX2 -= tlX;
 	objY2 -= tlY;
 
+	/* Fine collisions only work with active objects */
+	bool fineColl = rdPtr->fineColl && runObj->roHo.hoIdentifier == 'SPRI';
+
 	/* Check for any overlapping tile */
 	for (int x = x1; x <= x2; ++x)
 	{
@@ -143,7 +132,7 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 			if (tile->x != 0xff && tile->y != 0xff)
 			{
 				/* Bounding box collisions - we're done */
-				if (!rdPtr->fineColl)
+				if (!fineColl)
 					return true;
 
 				/* Get bounding box of tile */
@@ -162,39 +151,29 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 				int tilesetX = tile->x * tileWidth;
 				int tilesetY = tile->y * tileHeight;
 
+				cSurface* surface = tileset->surface;
 				bool alpha = surface->HasAlpha() != 0;
 
-				/* Check by alpha channel (TODO: FUCKING OPTIMIZATION) */
+				/* Check by alpha channel */
 				if (alpha)
 				{
-					cSurface* alphaSurf = surface->GetAlphaSurface();
-					BYTE* alphaBuff = alphaSurf->LockBuffer();
+					cSurface* alphaSurf = rdPtr->cndAlphaSurf;
 
 					for (int iX = intersectX1; iX < intersectX2; ++iX)
 						for (int iY = intersectY1; iY < intersectY2; ++iY)
 							if (alphaSurf->GetPixelFast8(tilesetX + iX, tilesetY + iY) > 0)
 								return true;
-				
-					alphaSurf->UnlockBuffer(alphaBuff);
-					surface->ReleaseAlphaSurface(alphaSurf);
 				}
 				/* Check by transparent color */
 				else
 				{
-					BYTE* buffer = surface->LockBuffer();
-
-					cSurface objectSurf;
-					LockImageSurface(rdPtr->rHo.hoAdRunHeader->rhIdAppli, runObj->roc.rcImage, objectSurf);
+					COLORREF transpCol = surface->GetTransparentColor();
 
 					for (int iX = intersectX1; iX < intersectX2; ++iX)
 						for (int iY = intersectY1; iY < intersectY2; ++iY)
 							if (surface->GetPixelFast(tilesetX + iX, tilesetY + iY) != transpCol)
 								return true;
-
-					surface->UnlockBuffer(buffer);
-					UnlockImageSurface(objectSurf);
 				}
-
 			}
 		}
 	}
@@ -220,16 +199,46 @@ CONDITION(
 	if (!layer->isValid())
 		return false;
 
-	ObjectSelection select = ObjectSelection(rdPtr->rHo.hoAdRunHeader);
-	select.rdPtr = rdPtr;
 
-	/* Gets a pointer to the event information structure and find out if the condition is negated */
-	PEVT pe = (PEVT)(((LPBYTE)param1)-CND_SIZE);
-	bool isNegated = (pe->evtFlags2 & EVFLAG2_NOT);
-	short oi = ((eventParam*)param1)->evp.evpW.evpW0;
+	/* Get layer's collision tileset */
+	unsigned char tilesetID = (layer->collision != 0xff) ? layer->collision : layer->tileset;
+	if (tilesetID >= rdPtr->p->tilesets->size())
+		return false;
 
-	rdPtr->cndLayer = layer;
-	return select.FilterObjects(oi, isNegated, cndObjOverlapsLayer);
+	Tileset* tileset = &(*rdPtr->p->tilesets)[tilesetID];
+
+	/* Get tileset's settings */
+	cSurface* surface = tileset->surface;
+	if (!surface)
+		return false;
+
+	/* Prepare surface buffer for reading */
+	BYTE* buff;
+	if (surface->HasAlpha())
+	{
+		rdPtr->cndAlphaSurf = surface->GetAlphaSurface();
+		buff = rdPtr->cndAlphaSurf->LockBuffer();
+	}
+	else
+	{
+		buff = surface->LockBuffer();
+	}
+
+	/* Perform overlap test */
+	long overlapping = ProcessCondition(rdPtr, param1, (long)layer, cndObjOverlapsLayer);
+
+	/* Done, now unlock buffers */
+	if (surface->HasAlpha())
+	{
+		rdPtr->cndAlphaSurf->UnlockBuffer(buff);
+		surface->ReleaseAlphaSurface(rdPtr->cndAlphaSurf);
+	}
+	else
+	{
+		surface->UnlockBuffer(buff);
+	}
+
+	return overlapping;
 }
 
 CONDITION(
