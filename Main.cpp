@@ -18,12 +18,12 @@ using namespace Riggs;
 inline int floordiv(int x, int d)
 {
 	/* Various solutions from the Internet didn't work. This one makes sense and the efficiency is negligible */
-	if(x < 0)
+	if (x < 0)
 	{
 		int unaligned = x;
 		x = 0;
 
-		while(x > unaligned)
+		while (x > unaligned)
 			x -= d;
 	}
 
@@ -32,25 +32,25 @@ inline int floordiv(int x, int d)
 
 bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 {
-	if(!rdPtr->p)
+	if (!rdPtr->p)
 		return false;
 
 	Layer* layer = rdPtr->cndLayer;
-	if(!layer->isValid())
+	if (!layer->isValid())
 		return false;
 
 	LPHO obj = (LPHO)runObj;
 	
 	/* Get layer's collision tileset */
 	unsigned char tilesetID = (layer->collision != 0xff) ? layer->collision : layer->tileset;
-	if(tilesetID >= rdPtr->p->tilesets->size())
+	if (tilesetID >= rdPtr->p->tilesets->size())
 		return false;
 
 	Tileset* tileset = &(*rdPtr->p->tilesets)[tilesetID];
 
 	/* Get tileset's settings */
 	cSurface* surface = tileset->surface;
-	if(!surface)
+	if (!surface)
 		return false;
 	COLORREF transpCol = tileset->transpCol;
 
@@ -71,9 +71,9 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	int layerHeight = layer->height * tileHeight;
 
 	/* Not overlapping visible part, exit */
-	if(!rdPtr->outsideColl)
+	if (!rdPtr->outsideColl)
 	{
-		if(objX+obj->hoImgWidth < rdPtr->rHo.hoX
+		if (objX+obj->hoImgWidth < rdPtr->rHo.hoX
 		|| objY+obj->hoImgHeight < rdPtr->rHo.hoY
 		|| objX > rdPtr->rHo.hoX+rdPtr->rHo.hoImgWidth
 		|| objY > rdPtr->rHo.hoY+rdPtr->rHo.hoImgHeight)
@@ -85,16 +85,16 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	objY -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
 
 	/* Wrap the coordinates if necessary */
-	if(layer->wrapX)
+	if (layer->wrapX)
 	{
-		while(objX < 0)
+		while (objX < 0)
 			objX += layerWidth;
 
 		objX %= layerWidth; 
 	}
-	if(layer->wrapY)
+	if (layer->wrapY)
 	{
-		while(objY < 0)
+		while (objY < 0)
 			objY += layerHeight;
 
 		objY %= layerHeight; 
@@ -119,7 +119,7 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 
 
 	/* Nothing to do if the object is not within the tile area */
-	if(x1 >= width || y1 >= height || x2 < 0 || y2 < 0)
+	if (x1 >= width || y1 >= height || x2 < 0 || y2 < 0)
 		return false;
 
 	/* Limit candidates to possibly overlapping tiles */
@@ -135,15 +135,15 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	objY2 -= tlY;
 
 	/* Check for any overlapping tile */
-	for(int x = x1; x <= x2; ++x)
+	for (int x = x1; x <= x2; ++x)
 	{
-		for(int y = y1; y <= y2; ++y)
+		for (int y = y1; y <= y2; ++y)
 		{
 			Tile* tile = layer->get(x, y);
-			if(tile->x != 0xff && tile->y != 0xff)
+			if (tile->x != 0xff && tile->y != 0xff)
 			{
 				/* Bounding box collisions - we're done */
-				if(!rdPtr->fineColl)
+				if (!rdPtr->fineColl)
 					return true;
 
 				/* Get bounding box of tile */
@@ -165,14 +165,14 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 				bool alpha = surface->HasAlpha() != 0;
 
 				/* Check by alpha channel (TODO: FUCKING OPTIMIZATION) */
-				if(alpha)
+				if (alpha)
 				{
 					cSurface* alphaSurf = surface->GetAlphaSurface();
 					BYTE* alphaBuff = alphaSurf->LockBuffer();
 
-					for(int xx = xx1; xx < xx2; ++xx)
-						for(int yy = yy1; yy < yy2; ++yy)
-							if(alphaSurf->GetPixelFast8(tilesetX+xx, tilesetY+yy) > 0)
+					for (int xx = xx1; xx < xx2; ++xx)
+						for (int yy = yy1; yy < yy2; ++yy)
+							if (alphaSurf->GetPixelFast8(tilesetX+xx, tilesetY+yy) > 0)
 								return true;
 				
 					alphaSurf->UnlockBuffer(alphaBuff);
@@ -186,9 +186,9 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 					cSurface objectSurf;
 					LockImageSurface(rdPtr->rHo.hoAdRunHeader->rhIdAppli, runObj->roc.rcImage, objectSurf);
 
-					for(int xx = xx1; xx < xx2; ++xx)
-						for(int yy = yy1; yy < yy2; ++yy)
-							if(surface->GetPixelFast(tilesetX+xx, tilesetY+yy) != transpCol)
+					for (int xx = xx1; xx < xx2; ++xx)
+						for (int yy = yy1; yy < yy2; ++yy)
+							if (surface->GetPixelFast(tilesetX+xx, tilesetY+yy) != transpCol)
 								return true;
 
 					surface->UnlockBuffer(buffer);
@@ -208,16 +208,16 @@ CONDITION(
 	/* Flags */			EVFLAGS_ALWAYS|EVFLAGS_NOTABLE,
 	/* Params */		(2, PARAM_OBJECT,"Object", PARAM_NUMBER,"Layer index")
 ) {
-	if(!rdPtr->p)
+	if (!rdPtr->p)
 		return false;
 
 	unsigned int id = (unsigned)param2;
 
-	if(id >= rdPtr->p->layers->size())
+	if (id >= rdPtr->p->layers->size())
 		return false;
 
 	Layer* layer = &(*rdPtr->p->layers)[id];
-	if(!layer->isValid())
+	if (!layer->isValid())
 		return false;
 
 	ObjectSelection select = ObjectSelection(rdPtr->rHo.hoAdRunHeader);
@@ -251,11 +251,11 @@ CONDITION(
 //	long obj = param1;
 //	unsigned int id = (unsigned)param2;
 //
-//	if(id < 0 || id >= rdPtr->layers->size())
+//	if (id < 0 || id >= rdPtr->layers->size())
 //		return false;
 //
 //	Layer* layer = &(*rdPtr->layers)[id];
-//	if(!layer->isValid())
+//	if (!layer->isValid())
 //		return false;
 //
 //	return ProcessCondition(rdPtr, obj,(long)layer, cndObjOverlapsLayer);
@@ -424,7 +424,7 @@ EXPRESSION(
 ) {
 	unsigned int i = ExParam(TYPE_INT);
 
-	if(i < rdPtr->p->layers->size())
+	if (i < rdPtr->p->layers->size())
 	{
 		return getLayerX(rdPtr, &(*rdPtr->p->layers)[i]);
 	}
@@ -440,7 +440,7 @@ EXPRESSION(
 ) {
 	unsigned int i = ExParam(TYPE_INT);
 
-	if(i < rdPtr->p->layers->size())
+	if (i < rdPtr->p->layers->size())
 	{
 		return getLayerY(rdPtr, &(*rdPtr->p->layers)[i]);
 	}

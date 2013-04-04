@@ -92,7 +92,7 @@ BOOL WINAPI DLLExport GetProperties(LPMV mV, LPEDATA edPtr, BOOL bMasterItem)
 #ifndef RUN_ONLY
 	mvInsertProps(mV, edPtr, Properties, PROPID_TAB_GENERAL, TRUE);
 	
-	if(!edPtr->transparent)
+	if (!edPtr->transparent)
 		//mvInsertProps(mV, edPtr, TranspColor, PROPID_TRANSPARENT, TRUE);
 	//else
 		mvInsertProps(mV, edPtr, BgColor, PROPID_TRANSPARENT, TRUE);
@@ -290,7 +290,7 @@ void WINAPI DLLExport SetPropCheck(LPMV mV, LPEDATA edPtr, UINT nPropID, BOOL nC
 	case PROPID_TRANSPARENT:
 		edPtr->transparent = nCheck ? true : false;
 		mvInvalidateObject(mV, edPtr);
-		if(nCheck)
+		if (nCheck)
 		{
 			mvRemoveProps(mV, edPtr, BgColor);
 			//mvInsertProps(mV, edPtr, TranspColor, PROPID_TRANSPARENT, TRUE);
@@ -714,24 +714,24 @@ void WINAPI DLLExport EditorDisplay(mv _far *mV, fpObjInfo oiPtr, fpLevObj loPtr
 
 		///* Get surfaces of tilesets */
 		//cSurface surfs[TILESETCOUNT];
-		//for(int i = 0; i < edPtr->tilesetCount; ++i)
+		//for (int i = 0; i < edPtr->tilesetCount; ++i)
 		//{
 		//	LockImageSurface(mV->mvIdAppli, edPtr->tilesets[i], surfs[i]);
 		//}
 	
 		/* Draw opaque background */
-		if(!edPtr->transparent)
+		if (!edPtr->transparent)
 			ps->Rectangle(rc->left, rc->top, rc->right, rc->bottom, edPtr->background, 0, 0, 1);
 
 		///* For each tile */
-		//if(edPtr->tileWidth > 0 && edPtr->tileHeight > 0)
+		//if (edPtr->tileWidth > 0 && edPtr->tileHeight > 0)
 		//{
-		//	for(int x = rc->left; x <= rc->right; x += edPtr->tileWidth)
+		//	for (int x = rc->left; x <= rc->right; x += edPtr->tileWidth)
 		//	{
-		//		for(int y = rc->top; y <= rc->bottom; y += edPtr->tileHeight)
+		//		for (int y = rc->top; y <= rc->bottom; y += edPtr->tileHeight)
 		//		{
 		//			* Draw a random tile */
-		//			if(edPtr->tilesetCount)
+		//			if (edPtr->tilesetCount)
 		//			{
 		//				int tileset = 0;
 		//				//int tileset = rand() % edPtr->tilesetCount;
@@ -753,7 +753,7 @@ void WINAPI DLLExport EditorDisplay(mv _far *mV, fpObjInfo oiPtr, fpLevObj loPtr
 		ps->ClearClipRect();
 
 		///* Unlock stuff */
-		//for(int i = 0; i < edPtr->tilesetCount; ++i)
+		//for (int i = 0; i < edPtr->tilesetCount; ++i)
 		//{
 		//	UnlockImageSurface(surfs[i]);
 		//}
@@ -915,11 +915,11 @@ HMENU GetPopupMenu(LPEDATA edPtr, short mn)
 {
 	HMENU hPopup=CreatePopupMenu();
 	
-	if(mn == MN_CONDITIONS)
+	if (mn == MN_CONDITIONS)
 		menucpy(hPopup, ConditionMenu(edPtr));
-	else if(mn == MN_ACTIONS)
+	else if (mn == MN_ACTIONS)
 		menucpy(hPopup, ActionMenu(edPtr));
-	else if(mn == MN_EXPRESSIONS)
+	else if (mn == MN_EXPRESSIONS)
 		menucpy(hPopup, ExpressionMenu(edPtr));
 
 	return hPopup;
@@ -935,7 +935,7 @@ HMENU GetPopupMenu(LPEDATA edPtr, short mn)
 static LPEVENTINFOS2 GetEventInformations(LPEVENTINFOS2 eiPtr, short code)
 
 {
-	while(eiPtr->infos.code != code)
+	while (eiPtr->infos.code != code)
 		eiPtr = EVINFO2_NEXT(eiPtr);
 	
 	return eiPtr;
@@ -997,29 +997,29 @@ void GetCodeTitle(LPEVENTINFOS2 eiPtr, short code, short param, short mn, LPSTR 
 	// If a special string is to be returned
 	short strID = EVINFO2_PARAMTITLE(eiPtr, param);
 
-	if(strID) {
+	if (strID) {
 		switch(mn) {
 		case MN_CONDITIONS:
-			if(code>=0&&code<(short)Conditions.size()) {
-				if(param>=0&&param<(short)Conditions[code]->getParamCount())
+			if (code>=0&&code<(short)Conditions.size()) {
+				if (param>=0&&param<(short)Conditions[code]->getParamCount())
 					strcpy(strBuf, Conditions[code]->getParamName(param));
 			}
 			break;
 		case MN_ACTIONS:
-			if(code>=0&&code<(short)Actions.size()) {
-				if(param>=0&&param<(short)Actions[code]->getParamCount())
+			if (code>=0&&code<(short)Actions.size()) {
+				if (param>=0&&param<(short)Actions[code]->getParamCount())
 					strcpy(strBuf, Actions[code]->getParamName(param));
 			}
 			break;
 		case MN_EXPRESSIONS:
-			if(code>=0&&code<(short)Expressions.size()) {
-				if(param>=0&&param<(short)Expressions[code]->getParamCount())
+			if (code>=0&&code<(short)Expressions.size()) {
+				if (param>=0&&param<(short)Expressions[code]->getParamCount())
 					strcpy(strBuf, Expressions[code]->getParamName(param));
 			}
 			break;
 		}
 	} else {
-		if((hMn=LoadMenu(hInstLib, MAKEINTRESOURCE(mn)))) {
+		if ((hMn=LoadMenu(hInstLib, MAKEINTRESOURCE(mn)))) {
 			GetMenuString(hMn, eiPtr->menu, strBuf, maxLen, MF_BYCOMMAND);
 			DestroyMenu(hMn);
 		}
@@ -1051,9 +1051,9 @@ short WINAPI DLLExport GetConditionCodeFromMenu(mv _far *mV, short menuId)
 #ifndef RUN_ONLY
 	LPEVENTINFOS2 eiPtr;
 	int n;
-	for(n=Conditions.size(), eiPtr=(LPEVENTINFOS2)conditionsInfos;n>0&&eiPtr->menu!=menuId;n--)
+	for (n=Conditions.size(), eiPtr=(LPEVENTINFOS2)conditionsInfos;n>0&&eiPtr->menu!=menuId;n--)
 		eiPtr=EVINFO2_NEXT(eiPtr);
-	if(n>0)
+	if (n>0)
 		return eiPtr->infos.code;
 #endif // !RUN_ONLY
 	return -1;
@@ -1132,7 +1132,7 @@ LPINFOEVENTSV2 WINAPI DLLExport GetExpressionInfos(mv _far *mV, short code)
 void WINAPI DLLExport GetConditionString(mv _far *mV, short code, LPSTR strPtr, short maxLen)
 {
 #ifndef RUN_ONLY
-		if(code>=0&&code<(short)Conditions.size())
+		if (code>=0&&code<(short)Conditions.size())
 			strcpy(strPtr, Conditions[code]->getName());
 #endif // !RUN_ONLY
 }
@@ -1140,7 +1140,7 @@ void WINAPI DLLExport GetConditionString(mv _far *mV, short code, LPSTR strPtr, 
 void WINAPI DLLExport GetActionString(mv _far *mV, short code, LPSTR strPtr, short maxLen)
 {
 #ifndef RUN_ONLY
-		if(code>=0&&code<(short)Actions.size())
+		if (code>=0&&code<(short)Actions.size())
 			strcpy(strPtr, Actions[code]->getName());
 #endif // !RUN_ONLY
 }
@@ -1148,7 +1148,7 @@ void WINAPI DLLExport GetActionString(mv _far *mV, short code, LPSTR strPtr, sho
 void WINAPI DLLExport GetExpressionString(mv _far *mV, short code, LPSTR strPtr, short maxLen)
 {
 #ifndef RUN_ONLY
-		if(code>=0&&code<(short)Expressions.size())
+		if (code>=0&&code<(short)Expressions.size())
 			strcpy(strPtr, Expressions[code]->getName());
 #endif // !RUN_ONLY
 }
@@ -1162,7 +1162,7 @@ void WINAPI DLLExport GetExpressionString(mv _far *mV, short code, LPSTR strPtr,
 void WINAPI DLLExport GetExpressionParam(mv _far *mV, short code, short param, LPSTR strBuf, short maxLen)
 {
 #ifndef RUN_ONLY
-	if(strlen(Expressions[code]->getParamName(param)))
+	if (strlen(Expressions[code]->getParamName(param)))
 		strcpy(strBuf, Expressions[code]->getParamName(param));
 	else
 		*strBuf=0;

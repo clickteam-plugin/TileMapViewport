@@ -63,7 +63,7 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 
 	/*	Non-transparent surfaces are rendered to an opaque viewport surface so that
 		the tiles do not have to be redrawn every single frame.						*/
-	if(!edPtr->transparent)
+	if (!edPtr->transparent)
 	{
 		cSurface* proto;
 		GetSurfacePrototype(&proto, rdPtr->depth, ST_MEMORY, SD_DIB);
@@ -124,11 +124,11 @@ short WINAPI DLLExport DestroyRunObject(LPRDATA rdPtr, long fast)
 short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 {
 	/* We redraw every frame if callbacks are enabled */
-	if(rdPtr->callback.use)
+	if (rdPtr->callback.use)
 		rdPtr->rc.rcChanged = true;
 
 	/* Unlink if deleted */
-	if(rdPtr->p && rdPtr->p->rHo.hoFlags & HOF_DESTROYED)
+	if (rdPtr->p && rdPtr->p->rHo.hoFlags & HOF_DESTROYED)
 		rdPtr->p = 0;
 
 	return rdPtr->rc.rcChanged ? REFLAG_DISPLAY : 0;
@@ -142,10 +142,10 @@ short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 {
 	/* No attached parent */
-	if(!rdPtr->p)
+	if (!rdPtr->p)
 		return 0;
 
-	if(rdPtr->autoScroll)
+	if (rdPtr->autoScroll)
 	{
 		rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
 		rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
@@ -156,7 +156,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	unsigned short tH = rdPtr->p->tileHeight;
 
 	/* Can't render */
-	if(!tW || !tH)
+	if (!tW || !tH)
 		return 0;
 
 	/* On-screen coords */
@@ -174,41 +174,41 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	/* Get output surface */
 	cSurface* ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
 	cSurface* target = tempSurf ? rdPtr->surface : ps;
-	if(!target)
+	if (!target)
 		return 0;
 
 	/* Clear background */
-	if(!rdPtr->transparent && tempSurf)
+	if (!rdPtr->transparent && tempSurf)
 		target->Fill(rdPtr->background);
 
 	/* For all wanted layers...*/
 	int layerCount = rdPtr->p->layers->size();
 
-	if(!layerCount)
+	if (!layerCount)
 		return 0;
 
-	int minLayer = max(0, min(layerCount-1, rdPtr->minLayer));
-	int maxLayer = max(0, min(layerCount-1, rdPtr->maxLayer));
+	int minLayer = max(0, min(layerCount - 1, rdPtr->minLayer));
+	int maxLayer = max(0, min(layerCount - 1, rdPtr->maxLayer));
 
-	if(minLayer <= maxLayer && maxLayer < layerCount)
+	if (minLayer <= maxLayer && maxLayer < layerCount)
 	{
-		for(int i = minLayer; i <= maxLayer; ++i)
+		for (int i = minLayer; i <= maxLayer; ++i)
 		{
 			/* Get a pointer to the iterated layer */
 			Layer* layer = &(*rdPtr->p->layers)[i];
 
 			/* No data to draw or simply invisible */
-			if(!layer->isValid() || !layer->visible)
+			if (!layer->isValid() || !layer->visible)
 				continue;
 
 			/* Get tileset */
-			if(layer->tileset >= rdPtr->p->tilesets->size())
+			if (layer->tileset >= rdPtr->p->tilesets->size())
 				continue;
 			Tileset* tileset = &(*rdPtr->p->tilesets)[layer->tileset];	
 
 			/* Get the associated tileset image */
 			cSurface* tileSurf = tileset->surface;
-			if(!tileSurf)
+			if (!tileSurf)
 				continue;
 
 			/* Store the layer size */
@@ -220,7 +220,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			int tlY = getLayerY(rdPtr, layer);
 
 			/* See if the layer is visible at all */
-			if((!layer->wrapX && (tlX >= width  || tlX+tW*lW < 0))
+			if ((!layer->wrapX && (tlX >= width  || tlX+tW*lW < 0))
 			|| (!layer->wrapY && (tlY >= height || tlY+tH*lH < 0)))
 				continue;
 
@@ -234,46 +234,46 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			int borderY = 1 + (rdPtr->callback.use ? rdPtr->callback.borderY : 0);
 
 			/* Optimize drawing region */
-			while(tlX <= -tW*borderX)
+			while (tlX <= -tW*borderX)
 			{
 				tlX += tW;
 				x1++;
 			}
-			while(tlY <= -tH*borderY)
+			while (tlY <= -tH*borderY)
 			{
 				tlY += tH;
 				y1++;
 			}
-			while(tlX + (x2-x1)*tW >= width + tW*borderX)
+			while (tlX + (x2-x1)*tW >= width + tW*borderX)
 			{
 				x2--;
 			}
-			while(tlY + (y2-y1)*tH >= height + tH*borderY)
+			while (tlY + (y2-y1)*tH >= height + tH*borderY)
 			{
 				y2--;
 			}
 
 			/* Wrapping */
-			if(layer->wrapX)
+			if (layer->wrapX)
 			{
-				while(tlX > -tW*(borderX-1))
+				while (tlX > -tW*(borderX-1))
 				{
 					tlX -= tW;
 					x1--;
 				}
-				while(tlX + (x2-x1-borderX+1)*tW  < width)
+				while (tlX + (x2-x1-borderX+1)*tW  < width)
 				{
 					x2++;
 				}
 			}
-			if(layer->wrapY)
+			if (layer->wrapY)
 			{
-				while(tlY > -tH*(borderY-1))
+				while (tlY > -tH*(borderY-1))
 				{
 					tlY -= tH;
 					y1--;
 				}
-				while(tlY + (y2-y1-borderY+1)*tH < height)
+				while (tlY + (y2-y1-borderY+1)*tH < height)
 				{
 					y2++;
 				}
@@ -284,17 +284,17 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			int onScreenY = tlY + (tempSurf ? 0 : vY);
 
 			/* If can render */
-			if(x2-x1 > 0 && y2-y1 > 0)
+			if (x2-x1 > 0 && y2-y1 > 0)
 			{
 				/* Per-tile offset (for callbacks) */
 				int offsetX = 0, offsetY = 0;
 
 				/* For every visible tile... */
 				int screenY = onScreenY;
-				for(int y = y1; y < y2; ++y)
+				for (int y = y1; y < y2; ++y)
 				{
 					int screenX = onScreenX;
-					for(int x = x1; x < x2; ++x)
+					for (int x = x1; x < x2; ++x)
 					{
 						/* Wrap (if possible anyway) */
 						int tX = (x % lW + lW) % lW;
@@ -307,7 +307,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 						do
 						{
 							/* Only process non-empty tiles */
-							if(tile->x == 0xff || tile->y == 0xff)
+							if (tile->x == 0xff || tile->y == 0xff)
 								break;
 
 							/* Determine tile opacity */
@@ -316,7 +316,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							LPARAM blitParam = 128 - int(opacity * 128);
 
 							/* We use callbacks, so let the programmer do stuff */
-							if(rdPtr->callback.use)
+							if (rdPtr->callback.use)
 							{
 								/* We need to map the tile to rdPtr so we can modify its values before rendering */
 								rdPtr->callback.tile = *tile;
@@ -343,7 +343,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								rdPtr->rRd->GenerateEvent(1);
 
 								/* Decided not to render tile... */
-								if(!rdPtr->callback.visible)
+								if (!rdPtr->callback.visible)
 									break;
 
 								/* Apply offset */
@@ -354,7 +354,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								opacity *= rdPtr->callback.opacity;
 
 								/* Compute blit operation */
-								if(rdPtr->callback.tint != WHITE)
+								if (rdPtr->callback.tint != WHITE)
 								{
 									blitOp = BOP_RGBAFILTER;
 									int rgb = rdPtr->callback.tint & 0xffffff;
@@ -369,20 +369,20 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							}
 
 							/* Blit from the surface of the tileset with the tile's index in the layer tilesets */
-							if(!clip)
+							if (!clip)
 							{
 								tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
 							}
 #ifdef HWABETA
 							/* HWA only: tile angle and scale on callback. Disables accurate clipping! */
-							else if(rdPtr->callback.transform)
+							else if (rdPtr->callback.transform)
 							{
 								float scaleX = rdPtr->callback.scaleX;
 								float scaleY = rdPtr->callback.scaleY;
 								float angle = rdPtr->callback.angle;
 
 								POINT center = {tW/2, tH/2};
-								tileSurf->BlitEx(*target, screenX+offsetX, screenY+offsetY, scaleX, scaleY, tile->x*tW, tile->y*tH, tW, tH,
+								tileSurf->BlitEx(*target, screenX+offsetX+center.x, screenY+offsetY+center.y, scaleX, scaleY, tile->x*tW, tile->y*tH, tW, tH,
 									&center, angle, BMODE_TRANSP, blitOp, blitParam);
 							}
 #endif
@@ -399,7 +399,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								sH = tH;
 
 								/* Clip left */
-								if(dX < 0)
+								if (dX < 0)
 								{
 									sX -= dX;
 									sW += dX;
@@ -407,7 +407,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								}
 
 								/* Clip top */
-								if(dY < 0)
+								if (dY < 0)
 								{
 									sY -= dY;
 									sH += dY;
@@ -415,14 +415,14 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								}
 								
 								/* Clip right */
-								if(dX + sW > width)
+								if (dX + sW > width)
 									sW -= tW - (width-dX);
 
 								/* Clip bottom */
-								if(dY + sH > height)
+								if (dY + sH > height)
 									sH -= tH - (height-dY);
 
-								if(dX < width && dY < height && sW > 0 && sH > 0)
+								if (dX < width && dY < height && sW > 0 && sH > 0)
 								{
 									/* Apply viewport position */
 									dX += vX;
@@ -432,7 +432,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								}
 							}
 						}
-						while(0);
+						while (0);
 
 						/* Calculate next on-screen X */
 						screenX += tW;
@@ -446,7 +446,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	}
 
 	/* Finish up */
-	if(tempSurf)
+	if (tempSurf)
 	{
 		rdPtr->surface->Blit(*ps, vX, vY, BMODE_OPAQUE,
 			BlitOp(rdPtr->rs.rsEffect & EFFECT_MASK), rdPtr->rs.rsEffectParam, 0);
@@ -804,20 +804,20 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, bool (*myFunc)(LP
 		LPQOI qualToOi = qualToOiStart;
 		bool passed = false;
 		
-		for(qualToOi; qualToOi->qoiOiList >= 0; qualToOi = (LPQOI)(((char*)qualToOi) + 4))
+		for (qualToOi; qualToOi->qoiOiList >= 0; qualToOi = (LPQOI)(((char*)qualToOi) + 4))
 		{
 			LPOIL curOi = oiList + qualToOi->qoiOiList;
 			
-			if(curOi->oilNObjects <= 0) continue;	//No Objects
+			if (curOi->oilNObjects <= 0) continue;	//No Objects
 
 			bool hasSelection = curOi->oilEventCount == rhPtr->rh2.rh2EventCount;
-			if(hasSelection && curOi->oilNumOfSelected <= 0) continue; //No selected objects
+			if (hasSelection && curOi->oilNumOfSelected <= 0) continue; //No selected objects
 			
 			LPHO curObj = NULL;
 			LPHO prevSelected = NULL;
 			int count = 0;
 			int selected = 0;
-			if(hasSelection) //Already has selected objects
+			if (hasSelection) //Already has selected objects
 			{
 				curObj = objList[curOi->oilListSelected].oblOffset;
 				count = curOi->oilNumOfSelected;
@@ -829,12 +829,12 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, bool (*myFunc)(LP
 				curOi->oilEventCount = rhPtr->rh2.rh2EventCount; //tell mmf that the object selection is relevant to this event
 			}
 			
-			for(int i = 0; i < count; i++)
+			for (int i = 0; i < count; i++)
 			{
 				//Check here
-				if(myFunc(rdPtr, curObj, param2))
+				if (myFunc(rdPtr, curObj, param2))
 				{
-					if(selected++ == 0)
+					if (selected++ == 0)
 					{
 						curOi->oilListSelected = curObj->hoNumber;
 					}
@@ -844,14 +844,14 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, bool (*myFunc)(LP
 					}
 					prevSelected = curObj;
 				}
-				if(hasSelection)
+				if (hasSelection)
 				{
-					if(curObj->hoNextSelected >= 0) curObj = objList[curObj->hoNextSelected].oblOffset;
+					if (curObj->hoNextSelected >= 0) curObj = objList[curObj->hoNextSelected].oblOffset;
 					else break;
 				}
 				else
 				{
-					if(curObj->hoNumNext >= 0) curObj = objList[curObj->hoNumNext].oblOffset;
+					if (curObj->hoNumNext >= 0) curObj = objList[curObj->hoNumNext].oblOffset;
 					else break;
 				}
 			}
@@ -872,16 +872,16 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, bool (*myFunc)(LP
 	else	// Not a qualifier
 	{
 		LPOIL curOi = oiList + p1;
-		if(curOi->oilNObjects <= 0) return false;	//No Objects
+		if (curOi->oilNObjects <= 0) return false;	//No Objects
 
 		bool hasSelection = curOi->oilEventCount == rhPtr->rh2.rh2EventCount;
-		if(hasSelection && curOi->oilNumOfSelected <= 0) return false; //No selected objects
+		if (hasSelection && curOi->oilNumOfSelected <= 0) return false; //No selected objects
 		
 		LPHO curObj = NULL;
 		LPHO prevSelected = NULL;
 		int count = 0;
 		int selected = 0;
-		if(hasSelection) //Already has selected objects
+		if (hasSelection) //Already has selected objects
 		{
 			curObj = objList[curOi->oilListSelected].oblOffset;
 			count = curOi->oilNumOfSelected;
@@ -893,12 +893,12 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, bool (*myFunc)(LP
 			curOi->oilEventCount = rhPtr->rh2.rh2EventCount; //tell mmf that the object selection is relevant to this event
 		}
 
-		for(int i = 0; i < count; i++)
+		for (int i = 0; i < count; i++)
 		{
 			//Check here
-			if(myFunc(rdPtr, curObj, param2))
+			if (myFunc(rdPtr, curObj, param2))
 			{
-				if(selected++ == 0)
+				if (selected++ == 0)
 				{
 					curOi->oilListSelected = curObj->hoNumber;
 				}
@@ -908,14 +908,14 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, bool (*myFunc)(LP
 				}
 				prevSelected = curObj;
 			}
-			if(hasSelection)
+			if (hasSelection)
 			{
-				if(curObj->hoNextSelected < 0) break;
+				if (curObj->hoNextSelected < 0) break;
 				else curObj = objList[curObj->hoNextSelected].oblOffset;
 			}
 			else
 			{
-				if(curObj->hoNumNext < 0) break;
+				if (curObj->hoNumNext < 0) break;
 				else curObj = objList[curObj->hoNumNext].oblOffset;
 			}
 		}
