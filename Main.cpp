@@ -312,7 +312,7 @@ ACTION(
 
 ACTION(
 	/* ID */			3,
-	/* Name */			"Set callback tile offset to (%0, %1)",
+	/* Name */			"Set tile offset to (%0, %1)",
 	/* Flags */			0,
 	/* Params */		(2, PARAM_NUMBER,"X offset (pixels)", PARAM_NUMBER,"Y offset (pixels)")
 ) {
@@ -341,7 +341,7 @@ ACTION(
 
 ACTION(
 	/* ID */			6,
-	/* Name */			"Set callback tile to (%0, %1)",
+	/* Name */			"Set tile to (%0, %1)",
 	/* Flags */			0,
 	/* Params */		(2, PARAM_NUMBER,"Tileset X", PARAM_NUMBER,"Tileset Y")
 ) {
@@ -365,7 +365,7 @@ ACTION(
 
 ACTION(
 	/* ID */			8,
-	/* Name */			"Set callback tile angle to %0",
+	/* Name */			"Set tile angle to %0",
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Angle (0-360)")
 ) {
@@ -377,7 +377,7 @@ ACTION(
 
 ACTION(
 	/* ID */			9,
-	/* Name */			"Set callback tile X scale to %0",
+	/* Name */			"Set tile X scale to %0",
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"X scale (1.0 = Default)")
 ) {
@@ -389,7 +389,7 @@ ACTION(
 
 ACTION(
 	/* ID */			10,
-	/* Name */			"Set callback tile Y scale to %0",
+	/* Name */			"Set tile Y scale to %0",
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Y scale (1.0 = Default)")
 ) {
@@ -401,7 +401,7 @@ ACTION(
 
 ACTION(
 	/* ID */			11,
-	/* Name */			"Set callback tile opacity to %0",
+	/* Name */			"Set tile opacity to %0",
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Opacity (0-1, 1 = Default)")
 ) {
@@ -410,13 +410,12 @@ ACTION(
 
 ACTION(
 	/* ID */			12,
-	/* Name */			"Set callback tile tint to %0",
+	/* Name */			"Set tile tint to %0",
 	/* Flags */			0,
 	/* Params */		(1, PARAM_COLOUR, "Tint (White = Default)")
 ) {
 	rdPtr->callback.tint = anyParam();
 }
-
 
 // ============================================================================
 //

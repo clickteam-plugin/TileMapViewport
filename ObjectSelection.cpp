@@ -4,6 +4,9 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, long (*myFunc)(LP
 {
 	short p1 = ((eventParam*)param1)->evp.evpW.evpW0;
 	
+	PEVT pe = (PEVT)(((LPBYTE)param1)-CND_SIZE);
+	bool relativeTrue = !(pe->evtFlags2 & EVFLAG2_NOT);
+
 	LPRH rhPtr = rdPtr->rHo.hoAdRunHeader;      //get a pointer to the mmf runtime header
 	LPOBL objList = rhPtr->rhObjectList;     //get a pointer to the mmf object list
 	LPOIL oiList = rhPtr->rhOiList;             //get a pointer to the mmf object info list
@@ -43,7 +46,7 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, long (*myFunc)(LP
 			for(int i = 0; i < count; i++)
 			{
 				//Check here
-				if(myFunc(rdPtr,(LPRO)curObj,param2))
+				if(bool(myFunc(rdPtr,(LPRO)curObj,param2)) == relativeTrue)
 				{
 					if(selected++ == 0)
 					{
@@ -107,7 +110,7 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, long (*myFunc)(LP
 		for(int i = 0; i < count; i++)
 		{
 			//Check here
-			if(myFunc(rdPtr,(LPRO)curObj,param2))
+			if(bool(myFunc(rdPtr,(LPRO)curObj,param2)) == relativeTrue)
 			{
 				if(selected++ == 0)
 				{
@@ -134,12 +137,12 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, long (*myFunc)(LP
 		if ( selected > 0 )
 		{
 			prevSelected->hoNextSelected = -1;
-			return true;
+			return relativeTrue;
 		}
 		else
 		{
 			curOi->oilListSelected = -32768;
 		}
-		return false;
+		return !relativeTrue;
 	}
 }
