@@ -73,10 +73,10 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 	/* Not overlapping visible part, exit */
 	if (!rdPtr->outsideColl)
 	{
-		if (objX+obj->hoImgWidth < rdPtr->rHo.hoX
-		|| objY+obj->hoImgHeight < rdPtr->rHo.hoY
-		|| objX > rdPtr->rHo.hoX+rdPtr->rHo.hoImgWidth
-		|| objY > rdPtr->rHo.hoY+rdPtr->rHo.hoImgHeight)
+		if (objX + obj->hoImgWidth < rdPtr->rHo.hoX
+		|| objY + obj->hoImgHeight < rdPtr->rHo.hoY
+		|| objX > rdPtr->rHo.hoX + rdPtr->rHo.hoImgWidth
+		|| objY > rdPtr->rHo.hoY + rdPtr->rHo.hoImgHeight)
 			return false;
 	}
 
@@ -149,14 +149,14 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 				/* Get bounding box of tile */
 				int tileX1 = tileWidth * x;
 				int tileY1 = tileHeight * y;
-				int tileX2 = tileWidth * (x+1);
-				int tileY2 = tileHeight * (y+1);
+				int tileX2 = tileWidth * (x + 1);
+				int tileY2 = tileHeight * (y + 1);
 
 				/* Get intersection box (relative to tile) */
-				int xx1 = max(objX1, tileX1) - tileX1;
-				int yy1 = max(objY1, tileY1) - tileY1;
-				int xx2 = min(objX2, tileX2) - tileX1;
-				int yy2 = min(objY2, tileY2) - tileY1;
+				int intersectX1 = max(objX1, tileX1) - tileX1;
+				int intersectY1 = max(objY1, tileY1) - tileY1;
+				int intersectX2 = min(objX2, tileX2) - tileX1;
+				int intersectY2 = min(objY2, tileY2) - tileY1;
 
 				/* Get position of tile in tileset */
 				int tilesetX = tile->x * tileWidth;
@@ -170,9 +170,9 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 					cSurface* alphaSurf = surface->GetAlphaSurface();
 					BYTE* alphaBuff = alphaSurf->LockBuffer();
 
-					for (int xx = xx1; xx < xx2; ++xx)
-						for (int yy = yy1; yy < yy2; ++yy)
-							if (alphaSurf->GetPixelFast8(tilesetX+xx, tilesetY+yy) > 0)
+					for (int iX = intersectX1; iX < intersectX2; ++iX)
+						for (int iY = intersectY1; iY < intersectY2; ++iY)
+							if (alphaSurf->GetPixelFast8(tilesetX + iX, tilesetY + iY) > 0)
 								return true;
 				
 					alphaSurf->UnlockBuffer(alphaBuff);
@@ -186,9 +186,9 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj)
 					cSurface objectSurf;
 					LockImageSurface(rdPtr->rHo.hoAdRunHeader->rhIdAppli, runObj->roc.rcImage, objectSurf);
 
-					for (int xx = xx1; xx < xx2; ++xx)
-						for (int yy = yy1; yy < yy2; ++yy)
-							if (surface->GetPixelFast(tilesetX+xx, tilesetY+yy) != transpCol)
+					for (int iX = intersectX1; iX < intersectX2; ++iX)
+						for (int iY = intersectY1; iY < intersectY2; ++iY)
+							if (surface->GetPixelFast(tilesetX + iX, tilesetY + iY) != transpCol)
 								return true;
 
 					surface->UnlockBuffer(buffer);
