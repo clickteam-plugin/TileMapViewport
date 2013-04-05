@@ -29,7 +29,7 @@ inline int floordiv(int x, int d)
 	return x / d;
 }
 
-/* NOTE: Requires rdPtr->cndTileset to be set accordingly! */
+/* NOTE: Requires rdPtr->cndTileset to be set accordingly if fineColl is true! */
 long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 {
 	if (!rdPtr->p)
@@ -38,6 +38,7 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	Layer* layer = (Layer*)layerParam;
 	LPHO obj = (LPHO)runObj;
 
+	/* Required for fine collisions */
 	Tileset* tileset = rdPtr->cndTileset;
 	
 	/* Store tile size (we'll need it often) */
@@ -121,7 +122,7 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	objY2 -= tlY;
 
 	/* Fine collisions only work with active objects */
-	bool fineColl = rdPtr->fineColl && runObj->roHo.hoIdentifier == 'SPRI';
+	bool fineColl = rdPtr->fineColl;
 
 	/* Check for any overlapping tile */
 	for (int x = x1; x <= x2; ++x)
@@ -205,37 +206,48 @@ CONDITION(
 	if (tilesetID >= rdPtr->p->tilesets->size())
 		return false;
 
-	Tileset* tileset = &(*rdPtr->p->tilesets)[tilesetID];
+	rdPtr->cndTileset = &(*rdPtr->p->tilesets)[tilesetID];
 
 	/* Get tileset's settings */
-	cSurface* surface = tileset->surface;
+	cSurface* surface = rdPtr->cndTileset->surface;
 	if (!surface)
 		return false;
 
-	/* Prepare surface buffer for reading */
-	BYTE* buff;
-	if (surface->HasAlpha())
+	/* Tile box collision */
+	long overlapping = 0;
+	if (!rdPtr->fineColl)
 	{
-		rdPtr->cndAlphaSurf = surface->GetAlphaSurface();
-		buff = rdPtr->cndAlphaSurf->LockBuffer();
+		/* Perform overlap test */
+		overlapping = ProcessCondition(rdPtr, param1, (long)layer, cndObjOverlapsLayer);
 	}
+	/* Fine collisions need some extra work... */
 	else
 	{
-		buff = surface->LockBuffer();
-	}
+		/* Prepare surface buffer for reading */
+		BYTE* buff;
+		if (surface->HasAlpha())
+		{
+			rdPtr->cndAlphaSurf = surface->GetAlphaSurface();
+			buff = rdPtr->cndAlphaSurf->LockBuffer();
+		}
+		else
+		{
+			buff = surface->LockBuffer();
+		}
 
-	/* Perform overlap test */
-	long overlapping = ProcessCondition(rdPtr, param1, (long)layer, cndObjOverlapsLayer);
+		/* Perform overlap test */
+		overlapping = ProcessCondition(rdPtr, param1, (long)layer, cndObjOverlapsLayer);
 
-	/* Done, now unlock buffers */
-	if (surface->HasAlpha())
-	{
-		rdPtr->cndAlphaSurf->UnlockBuffer(buff);
-		surface->ReleaseAlphaSurface(rdPtr->cndAlphaSurf);
-	}
-	else
-	{
-		surface->UnlockBuffer(buff);
+		/* Done, now unlock buffers */
+		if (surface->HasAlpha())
+		{
+			rdPtr->cndAlphaSurf->UnlockBuffer(buff);
+			surface->ReleaseAlphaSurface(rdPtr->cndAlphaSurf);
+		}
+		else
+		{
+			surface->UnlockBuffer(buff);
+		}
 	}
 
 	return overlapping;
