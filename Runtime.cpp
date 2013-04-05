@@ -304,8 +304,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 						/* Calculate position and render the tile, exit when impossible */
 						do
 						{
-							/* Only process non-empty tiles */
-							if (tile->x == 0xff || tile->y == 0xff)
+							if (tile->id == Tile::EMPTY)
 								break;
 
 							/* Determine tile opacity */
