@@ -25,6 +25,10 @@ using namespace std;
 
 #include	"ObjectSelection.h"
 
+#ifdef HWABETA
+#include <d3d9.h>
+#endif
+
 inline int getLayerX(LPRDATA rdPtr, Layer* layer)
 {
 	return (int)((layer->offsetX - rdPtr->cameraX) * layer->scrollX);

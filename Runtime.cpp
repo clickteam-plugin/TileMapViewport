@@ -205,7 +205,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			Tileset* tileset = &(*rdPtr->p->tilesets)[layer->tileset];	
 
 			/* Get the associated tileset image */
-			cSurface* tileSurf = tileset->surface;
+			cSurface* tileSurf = tileset->texture;
 			if (!tileSurf)
 				continue;
 
