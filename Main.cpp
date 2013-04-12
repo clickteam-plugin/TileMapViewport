@@ -121,7 +121,6 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	objX2 -= tlX;
 	objY2 -= tlY;
 
-	/* Fine collisions only work with active objects */
 	bool fineColl = rdPtr->fineColl;
 
 	/* Check for any overlapping tile */
