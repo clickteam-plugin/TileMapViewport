@@ -60,10 +60,10 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	/* Not overlapping visible part, exit */
 	if (!rdPtr->outsideColl)
 	{
-		if (objX + obj->hoImgWidth < rdPtr->rHo.hoX
-		|| objY + obj->hoImgHeight < rdPtr->rHo.hoY
-		|| objX > rdPtr->rHo.hoX + rdPtr->rHo.hoImgWidth
-		|| objY > rdPtr->rHo.hoY + rdPtr->rHo.hoImgHeight)
+		if (objX + obj->hoImgWidth < rdPtr->rHo.hoX - rdPtr->collMargin.left
+		|| objY + obj->hoImgHeight < rdPtr->rHo.hoY - rdPtr->collMargin.top
+		|| objX > rdPtr->rHo.hoX + rdPtr->rHo.hoImgWidth + rdPtr->collMargin.right
+		|| objY > rdPtr->rHo.hoY + rdPtr->rHo.hoImgHeight + rdPtr->collMargin.bottom)
 			return false;
 	}
 
@@ -427,6 +427,20 @@ ACTION(
 ) {
 	rdPtr->callback.tint = anyParam();
 }
+
+ACTION(
+	/* ID */			13,
+	/* Name */			"Set collision margin to (%0, %1, %2, %3)",
+	/* Flags */			0,
+	/* Params */		(4, PARAM_NUMBER, "Extra pixels to the left", PARAM_NUMBER, "Extra pixels to the top",
+							PARAM_NUMBER, "Extra pixels to the right", PARAM_NUMBER, "Extra pixels to the bottom")
+) {
+	rdPtr->collMargin.left = intParam();
+	rdPtr->collMargin.top = intParam();
+	rdPtr->collMargin.right = intParam();
+	rdPtr->collMargin.bottom = intParam();
+}
+
 
 // ============================================================================
 //

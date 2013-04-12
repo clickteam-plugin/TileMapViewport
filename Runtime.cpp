@@ -85,6 +85,7 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	/* Misc */
 	rdPtr->outsideColl = edPtr->outsideColl;
 	rdPtr->fineColl = edPtr->fineColl;
+	memset(&rdPtr->collMargin, 0, sizeof(RECT));
 
 	/* Camera/drawing */
 	rdPtr->cameraX = 0;

@@ -23,6 +23,9 @@
 		ITEM(2, "Set background color")
 		ITEM(1, "Set size")
 	SUB_END
+	SUB_START("Collisions")
+		ITEM(13, "Set collision margin")
+	SUB_END
 	SEPARATOR
 	SUB_START("Callbacks")
 		ITEM(4, "Enable")
