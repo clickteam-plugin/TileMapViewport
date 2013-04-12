@@ -148,14 +148,6 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
 		rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
 	}
-	
-	/* Store drawing settings for fast access */
-	unsigned short tW = rdPtr->p->tileWidth;
-	unsigned short tH = rdPtr->p->tileHeight;
-
-	/* Can't render */
-	if (!tW || !tH)
-		return 0;
 
 	/* On-screen coords */
 	int vX = rdPtr->rHo.hoRect.left;
@@ -197,6 +189,14 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
 			/* No data to draw or simply invisible */
 			if (!layer->isValid() || !layer->visible)
+				continue;
+			
+			/* Store drawing settings for fast access */
+			unsigned short tW = layer->tileWidth;
+			unsigned short tH = layer->tileHeight;
+
+			/* Can't render */
+			if (!tW || !tH)
 				continue;
 
 			/* Get tileset */

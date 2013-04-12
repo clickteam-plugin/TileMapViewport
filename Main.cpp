@@ -42,8 +42,8 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	Tileset* tileset = rdPtr->cndTileset;
 	
 	/* Store tile size (we'll need it often) */
-	int tileWidth = rdPtr->p->tileWidth;
-	int tileHeight = rdPtr->p->tileHeight;
+	int tileWidth = layer->tileWidth;
+	int tileHeight = layer->tileHeight;
 
 	/* Compute layer position on screen */
 	int tlX = getLayerX(rdPtr, layer) + rdPtr->rHo.hoRect.left;
