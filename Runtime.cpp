@@ -50,10 +50,10 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	rdPtr->rHo.hoImgHeight = edPtr->height;
 	rdPtr->rc.rcChanged = true;
 
-	/* No parent by default... */
+	// No parent by default...
 	rdPtr->p = 0;
 
-	/* Create surface, get MMF depth.. */
+	// Create surface, get MMF depth..
 	cSurface* ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
 	rdPtr->depth = ps->GetDepth();
 
@@ -73,26 +73,26 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 
 #endif
 
-	/* Background settings */
+	// Background settings
 	rdPtr->transparent = edPtr->transparent;
 	rdPtr->background = edPtr->background;
 	rdPtr->accurateClip = edPtr->accurateClip;
 
-	/* Layer stuff */
+	// Layer stuff
 	rdPtr->minLayer = edPtr->minLayer;
 	rdPtr->maxLayer = edPtr->maxLayer;
 
-	/* Misc */
+	// Misc
 	rdPtr->outsideColl = edPtr->outsideColl;
 	rdPtr->fineColl = edPtr->fineColl;
 	memset(&rdPtr->collMargin, 0, sizeof(RECT));
 
-	/* Camera/drawing */
+	// Camera/drawing
 	rdPtr->cameraX = 0;
 	rdPtr->cameraY = 0;
 	rdPtr->autoScroll = edPtr->autoScroll;
 
-	/* Initialize callbacks */
+	// Initialize callbacks
 	rdPtr->callback.use = false;
 
 	return 0;
@@ -106,7 +106,7 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 // 
 short WINAPI DLLExport DestroyRunObject(LPRDATA rdPtr, long fast)
 {
-	/* TM will detach this viewport anyway! */
+	// TM will detach this viewport anyway!
 
 	delete rdPtr->surface;
 
@@ -122,11 +122,11 @@ short WINAPI DLLExport DestroyRunObject(LPRDATA rdPtr, long fast)
 // 
 short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 {
-	/* We redraw every frame if callbacks are enabled */
+	// We redraw every frame if callbacks are enabled
 	if (rdPtr->callback.use)
 		rdPtr->rc.rcChanged = true;
 
-	/* Unlink if deleted */
+	// Unlink if deleted
 	if (rdPtr->p && rdPtr->p->rHo.hoFlags & HOF_DESTROYED)
 		rdPtr->p = 0;
 
@@ -140,7 +140,7 @@ short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 // 
 short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 {
-	/* No attached parent */
+	// No attached parent
 	if (!rdPtr->p)
 		return 0;
 
@@ -150,29 +150,29 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
 	}
 
-	/* On-screen coords */
+	// On-screen coords
 	int vX = rdPtr->rHo.hoRect.left;
 	int vY = rdPtr->rHo.hoRect.top;
 	int width = rdPtr->rHo.hoImgWidth;
 	int height = rdPtr->rHo.hoImgHeight;
 
-	/* Whether or not we use a temporary surface (-> coordinate shifting) */
+	// Whether or not we use a temporary surface (-> coordinate shifting)
 	bool tempSurf = rdPtr->surface != 0;
 
-	/* Whether we have to perform pixel clipping on blitted tiles */
+	// Whether we have to perform pixel clipping on blitted tiles
 	bool clip = !tempSurf && rdPtr->accurateClip;
 
-	/* Get output surface */
+	// Get output surface
 	cSurface* ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
 	cSurface* target = tempSurf ? rdPtr->surface : ps;
 	if (!target)
 		return 0;
 
-	/* Clear background */
+	// Clear background
 	if (!rdPtr->transparent && tempSurf)
 		target->Fill(rdPtr->background);
 
-	/* For all wanted layers...*/
+	// For all wanted layers...
 	int layerCount = rdPtr->p->layers->size();
 
 	if (!layerCount)
@@ -185,40 +185,40 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	{
 		for (int i = minLayer; i <= maxLayer; ++i)
 		{
-			/* Get a pointer to the iterated layer */
+			// Get a pointer to the iterated layer
 			Layer* layer = &(*rdPtr->p->layers)[i];
 
-			/* No data to draw or simply invisible */
+			// No data to draw or simply invisible
 			if (!layer->isValid() || !layer->visible)
 				continue;
 			
-			/* Store drawing settings for fast access */
+			// Store drawing settings for fast access
 			unsigned short tW = layer->tileWidth;
 			unsigned short tH = layer->tileHeight;
 
-			/* Can't render */
+			// Can't render
 			if (!tW || !tH)
 				continue;
 
-			/* Get tileset */
+			// Get tileset
 			if (layer->tileset >= rdPtr->p->tilesets->size())
 				continue;
 			Tileset* tileset = &(*rdPtr->p->tilesets)[layer->tileset];	
 
-			/* Get the associated tileset image */
+			// Get the associated tileset image
 			cSurface* tileSurf = tileset->texture;
 			if (!tileSurf)
 				continue;
 
-			/* Store the layer size */
+			// Store the layer size
 			int lW = layer->width;
 			int lH = layer->height;
 
-			/* On-screen coordinate */
+			// On-screen coordinate
 			int tlX = getLayerX(rdPtr, layer);
 			int tlY = getLayerY(rdPtr, layer);
 
-			/* See if the layer is visible at all */
+			// See if the layer is visible at all
 			if ((!layer->wrapX && (tlX >= width  || tlX+tW*lW < 0))
 			|| (!layer->wrapY && (tlY >= height || tlY+tH*lH < 0)))
 				continue;
@@ -228,11 +228,11 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			int x2 = lW;
 			int y2 = lH;
 
-			/* Additional tiles to render outside of the visible area */
+			// Additional tiles to render outside of the visible area
 			int borderX = 1 + (rdPtr->callback.use ? rdPtr->callback.borderX : 0);
 			int borderY = 1 + (rdPtr->callback.use ? rdPtr->callback.borderY : 0);
 
-			/* Optimize drawing region */
+			// Optimize drawing region
 			while (tlX <= -tW*borderX)
 			{
 				tlX += tW;
@@ -252,7 +252,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 				y2--;
 			}
 
-			/* Wrapping */
+			// Wrapping
 			if (layer->wrapX)
 			{
 				while (tlX > -tW*(borderX-1))
@@ -278,80 +278,80 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 				}
 			}
 
-			/* Draw to screen: Add on-screen offset */
+			// Draw to screen: Add on-screen offset
 			int onScreenX = tlX + (tempSurf ? 0 : vX);
 			int onScreenY = tlY + (tempSurf ? 0 : vY);
 
-			/* If can render */
+			// If can render
 			if (x2-x1 > 0 && y2-y1 > 0)
 			{
-				/* Per-tile offset (for callbacks) */
+				// Per-tile offset (for callbacks)
 				int offsetX = 0, offsetY = 0;
 
-				/* For every visible tile... */
+				// For every visible tile...
 				int screenY = onScreenY;
 				for (int y = y1; y < y2; ++y)
 				{
 					int screenX = onScreenX;
 					for (int x = x1; x < x2; ++x)
 					{
-						/* Wrap (if possible anyway) */
+						// Wrap (if possible anyway)
 						int tX = (x % lW + lW) % lW;
 						int tY = (y % lH + lH) % lH;
 
-						/* Get this tile's address */
+						// Get this tile's address
 						Tile* tile = layer->data + tX + tY*lW;
 
-						/* Calculate position and render the tile, exit when impossible */
+						// Calculate position and render the tile, exit when impossible
 						do
 						{
 							if (tile->id == Tile::EMPTY)
 								break;
 
-							/* Determine tile opacity */
+							// Determine tile opacity
 							BlitOp blitOp = layer->opacity < 0.999 ? BOP_BLEND : BOP_COPY;
 							float opacity = layer->opacity;
 							LPARAM blitParam = 128 - int(opacity * 128);
 
-							/* We use callbacks, so let the programmer do stuff */
+							// We use callbacks, so let the programmer do stuff
 							if (rdPtr->callback.use)
 							{
-								/* We need to map the tile to rdPtr so we can modify its values before rendering */
+								// We need to map the tile to rdPtr so we can modify its values before rendering
 								rdPtr->callback.tile = *tile;
 								tile = &rdPtr->callback.tile;
 
-								/* Reset some values */
+								// Reset some values
 								rdPtr->callback.visible = true;
 								rdPtr->callback.opacity = 1.0;
 								rdPtr->callback.offsetX = 0;
 								rdPtr->callback.offsetY = 0;
 
-								/* HWA specific */
+								// HWA specific
 								rdPtr->callback.tint = WHITE;
 								rdPtr->callback.transform = false;
 								rdPtr->callback.scaleX = 1.0f;
 								rdPtr->callback.scaleY = 1.0f;
 								rdPtr->callback.angle = 0.0f;
 
-								/* Grant access to tile position */
+								// Grant access to tile position
 								rdPtr->callback.x = x;
 								rdPtr->callback.y = y;
 
-								/* Call condition so the programmer can modify the values */
+								// Call condition so the programmer can modify the values
 								rdPtr->rRd->GenerateEvent(1);
 
-								/* Decided not to render tile... */
+								// Decided not to render tile...
 								if (!rdPtr->callback.visible)
 									break;
 
-								/* Apply offset */
+								// Apply offset
 								offsetX = rdPtr->callback.offsetX;
 								offsetY = rdPtr->callback.offsetY;
 
-								/* Apply opacity */
+								// Apply opacity
 								opacity *= rdPtr->callback.opacity;
 
-								/* Compute blit operation */
+								// Compute blit operation
 								if (rdPtr->callback.tint != WHITE)
 								{
 									blitOp = BOP_RGBAFILTER;
@@ -366,13 +366,13 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								}
 							}
 
-							/* Blit from the surface of the tileset with the tile's index in the layer tilesets */
+							// Blit from the surface of the tileset with the tile's index in the layer tilesets
 							if (!clip)
 							{
 								tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
 							}
 #ifdef HWABETA
-							/* HWA only: tile angle and scale on callback. Disables accurate clipping! */
+							// HWA only: tile angle and scale on callback. Disables accurate clipping!
 							else if (rdPtr->callback.transform)
 							{
 								float scaleX = rdPtr->callback.scaleX;
@@ -385,7 +385,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							}
 #endif
 
-							/* Before blitting, perform clipping so that we won't draw outside of the viewport... */
+							// Before blitting, perform clipping so that we won't draw outside of the viewport...
 							else
 							{
 								int dX, dY, sX, sY, sW, sH;
@@ -396,7 +396,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								sW = tW;
 								sH = tH;
 
-								/* Clip left */
+								// Clip left
 								if (dX < 0)
 								{
 									sX -= dX;
@@ -404,7 +404,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 									dX = 0;
 								}
 
-								/* Clip top */
+								// Clip top
 								if (dY < 0)
 								{
 									sY -= dY;
@@ -412,17 +412,17 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 									dY = 0;
 								}
 								
-								/* Clip right */
+								// Clip right
 								if (dX + sW > width)
 									sW -= tW - (width-dX);
 
-								/* Clip bottom */
+								// Clip bottom
 								if (dY + sH > height)
 									sH -= tH - (height-dY);
 
 								if (dX < width && dY < height && sW > 0 && sH > 0)
 								{
-									/* Apply viewport position */
+									// Apply viewport position
 									dX += vX;
 									dY += vY;
 
@@ -432,25 +432,25 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 						}
 						while (0);
 
-						/* Calculate next on-screen X */
+						// Calculate next on-screen X
 						screenX += tW;
 					}
 
-					/* Calculate next on-screen Y */
+					// Calculate next on-screen Y
 					screenY += tH;
 				}
 			}
 		}
 	}
 
-	/* Finish up */
+	// Finish up
 	if (tempSurf)
 	{
 		rdPtr->surface->Blit(*ps, vX, vY, BMODE_OPAQUE,
 			BlitOp(rdPtr->rs.rsEffect & EFFECT_MASK), rdPtr->rs.rsEffectParam, 0);
 	}
 
-	/* Update window region */
+	// Update window region
 	WinAddZone(rdPtr->rHo.hoAdRunHeader->rhIdEditWin, &rdPtr->rHo.hoRect);
 
 	return 0;
@@ -464,7 +464,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 // in DisplayRunObject too, but this is automatically done if you implement
 // GetRunObjectSurface (MMF applies the ink effect to the transition).
 //
-// Note: do not forget to enable the function in the .def file 
+// Note: do not forget to enable the function in the .def file
 // if you remove the comments below.
 
 //cSurface* WINAPI DLLExport GetRunObjectSurface(LPRDATA rdPtr)
@@ -481,7 +481,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 //
 // Should return NULL if the object is not transparent.
 //
-// Note: do not forget to enable the function in the .def file 
+// Note: do not forget to enable the function in the .def file
 // if you remove the comments below.
 //
 /*
@@ -621,7 +621,7 @@ void WINAPI DLLExport EndFrame(mv _far *mV, DWORD dwReserved, int nFrameIndex)
 // 
 /*
 
-  // Note: do not forget to enable the functions in the .def file 
+  // Note: do not forget to enable the functions in the .def file
   // if you remove the comments below.
 
 void WINAPI GetRunObjectFont(LPRDATA rdPtr, LOGFONT* pLf)

@@ -13,10 +13,10 @@
 // 
 // ============================================================================
 
-/* Divide x by d, round towards -infinity, always */
+// Divide x by d, round towards -infinity, always
 inline int floordiv(int x, int d)
 {
-	/* Various solutions from the Internet didn't work. This one makes sense and the efficiency is negligible */
+	// Various solutions from the Internet didn't work. This one makes sense and the efficiency is negligible
 	if (x < 0)
 	{
 		int unaligned = x;
@@ -29,7 +29,7 @@ inline int floordiv(int x, int d)
 	return x / d;
 }
 
-/* NOTE: Requires rdPtr->cndTileset to be set accordingly if fineColl is true! */
+// NOTE: Requires rdPtr->cndTileset to be set accordingly if fineColl is true!
 long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 {
 	if (!rdPtr->p)
@@ -38,26 +38,26 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	Layer* layer = (Layer*)layerParam;
 	LPHO obj = (LPHO)runObj;
 
-	/* Required for fine collisions */
+	// Required for fine collisions
 	Tileset* tileset = rdPtr->cndTileset;
 	
-	/* Store tile size (we'll need it often) */
+	// Store tile size (we'll need it often)
 	int tileWidth = layer->tileWidth;
 	int tileHeight = layer->tileHeight;
 
-	/* Compute layer position on screen */
+	// Compute layer position on screen
 	int tlX = getLayerX(rdPtr, layer) + rdPtr->rHo.hoRect.left;
 	int tlY = getLayerY(rdPtr, layer) + rdPtr->rHo.hoRect.top;
 
-	/* Get object coordinates */
+	// Get object coordinates
 	int objX = obj->hoX - obj->hoImgXSpot;
 	int objY = obj->hoY - obj->hoImgYSpot;
 
-	/* Get layer size in px */
+	// Get layer size in px
 	int layerWidth = layer->width * tileWidth;
 	int layerHeight = layer->height * tileHeight;
 
-	/* Not overlapping visible part, exit */
+	// Not overlapping visible part, exit
 	if (!rdPtr->outsideColl)
 	{
 		if (objX + obj->hoImgWidth < rdPtr->rHo.hoX - rdPtr->collMargin.left
@@ -67,11 +67,11 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 			return false;
 	}
 
-	/* Convert to on-screen coordinates */
+	// Convert to on-screen coordinates
 	objX -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
 	objY -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
 
-	/* Wrap the coordinates if necessary */
+	// Wrap the coordinates if necessary
 	if (layer->wrapX)
 	{
 		while (objX < 0)
@@ -87,35 +87,35 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 		objY %= layerHeight; 
 	}
 
-	/* Get bounding box of object */
+	// Get bounding box of object
 	int objX1 = objX;
 	int objY1 = objY;
 	int objX2 = objX + obj->hoImgWidth;
 	int objY2 = objY + obj->hoImgHeight;
 
-	/* Get the tiles that the object overlaps */
+	// Get the tiles that the object overlaps
 	int x1 = floordiv(objX1 - tlX, tileWidth);
 	int y1 = floordiv(objY1 - tlY, tileHeight);
 	int x2 = floordiv(objX2 - tlX - 1, tileWidth);
 	int y2 = floordiv(objY2 - tlY - 1, tileHeight);
 
 
-	/* Ensure that the tiles are in the layer */
+	// Ensure that the tiles are in the layer
 	int width = layer->width;
 	int height = layer->height;
 
 
-	/* Nothing to do if the object is not within the tile area */
+	// Nothing to do if the object is not within the tile area
 	if (x1 >= width || y1 >= height || x2 < 0 || y2 < 0)
 		return false;
 
-	/* Limit candidates to possibly overlapping tiles */
+	// Limit candidates to possibly overlapping tiles
 	x1 = max(0, x1);
 	x2 = min(width-1, x2);
 	y1 = max(0, y1);
 	y2 = min(height-1, y2);
 
-	/* Make object coordinates relative to layer's origin */
+	// Make object coordinates relative to layer's origin
 	objX1 -= tlX;
 	objY1 -= tlY;
 	objX2 -= tlX;
@@ -123,7 +123,7 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 
 	bool fineColl = rdPtr->fineColl;
 
-	/* Check for any overlapping tile */
+	// Check for any overlapping tile
 	for (int x = x1; x <= x2; ++x)
 	{
 		for (int y = y1; y <= y2; ++y)
@@ -131,30 +131,30 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 			Tile* tile = layer->get(x, y);
 			if (tile->x != 0xff && tile->y != 0xff)
 			{
-				/* Bounding box collisions - we're done */
+				// Bounding box collisions - we're done
 				if (!fineColl)
 					return true;
 
-				/* Get bounding box of tile */
+				// Get bounding box of tile
 				int tileX1 = tileWidth * x;
 				int tileY1 = tileHeight * y;
 				int tileX2 = tileWidth * (x + 1);
 				int tileY2 = tileHeight * (y + 1);
 
-				/* Get intersection box (relative to tile) */
+				// Get intersection box (relative to tile)
 				int intersectX1 = max(objX1, tileX1) - tileX1;
 				int intersectY1 = max(objY1, tileY1) - tileY1;
 				int intersectX2 = min(objX2, tileX2) - tileX1;
 				int intersectY2 = min(objY2, tileY2) - tileY1;
 
-				/* Get position of tile in tileset */
+				// Get position of tile in tileset
 				int tilesetX = tile->x * tileWidth;
 				int tilesetY = tile->y * tileHeight;
 
 				cSurface* surface = tileset->surface;
 				bool alpha = surface->HasAlpha() != 0;
 
-				/* Check by alpha channel */
+				// Check by alpha channel
 				if (alpha)
 				{
 					cSurface* alphaSurf = rdPtr->cndAlphaSurf;
@@ -164,7 +164,7 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 							if (alphaSurf->GetPixelFast8(tilesetX + iX, tilesetY + iY) > 0)
 								return true;
 				}
-				/* Check by transparent color */
+				// Check by transparent color
 				else
 				{
 					COLORREF transpCol = surface->GetTransparentColor();
@@ -200,29 +200,29 @@ CONDITION(
 		return false;
 
 
-	/* Get layer's collision tileset */
+	// Get layer's collision tileset
 	unsigned char tilesetID = (layer->collision != 0xff) ? layer->collision : layer->tileset;
 	if (tilesetID >= rdPtr->p->tilesets->size())
 		return false;
 
 	rdPtr->cndTileset = &(*rdPtr->p->tilesets)[tilesetID];
 
-	/* Get tileset's settings */
+	// Get tileset's settings
 	cSurface* surface = rdPtr->cndTileset->surface;
 	if (!surface)
 		return false;
 
-	/* Tile box collision */
+	// Tile box collision
 	long overlapping = 0;
 	if (!rdPtr->fineColl)
 	{
-		/* Perform overlap test */
+		// Perform overlap test
 		overlapping = ProcessCondition(rdPtr, param1, (long)layer, cndObjOverlapsLayer);
 	}
-	/* Fine collisions need some extra work... */
+	// Fine collisions need some extra work...
 	else
 	{
-		/* Prepare surface buffer for reading */
+		// Prepare surface buffer for reading
 		BYTE* buff;
 		if (surface->HasAlpha())
 		{
@@ -234,10 +234,10 @@ CONDITION(
 			buff = surface->LockBuffer();
 		}
 
-		/* Perform overlap test */
+		// Perform overlap test
 		overlapping = ProcessCondition(rdPtr, param1, (long)layer, cndObjOverlapsLayer);
 
-		/* Done, now unlock buffers */
+		// Done, now unlock buffers
 		if (surface->HasAlpha())
 		{
 			rdPtr->cndAlphaSurf->UnlockBuffer(buff);

@@ -11,7 +11,7 @@ typedef struct tagEDATA_V1
 
 	bool			autoScroll;
 
-	/* Transparency */
+	// Transparency
 	bool			transparent;
 	COLORREF		unused; //transpColor;
 	COLORREF		background;
