@@ -338,6 +338,7 @@ ACTION(
 	/* Params */		(0)
 ) {
 	rdPtr->callback.use = true;
+	rdPtr->rc.rcChanged = true;
 }
 
 ACTION(
@@ -347,6 +348,7 @@ ACTION(
 	/* Params */		(0)
 ) {
 	rdPtr->callback.use = false;
+	rdPtr->rc.rcChanged = true;
 }
 
 
@@ -372,6 +374,7 @@ ACTION(
 	rdPtr->callback.borderY = intParam();
 	rdPtr->callback.borderX = max(0, min(1000, rdPtr->callback.borderX));
 	rdPtr->callback.borderY = max(0, min(1000, rdPtr->callback.borderY));
+	rdPtr->rc.rcChanged = true;
 }
 
 ACTION(
@@ -441,6 +444,17 @@ ACTION(
 	rdPtr->collMargin.bottom = intParam();
 }
 
+ACTION(
+	/* ID */			14,
+	/* Name */			"Set layers to draw to (%0, %1)",
+	/* Flags */			0,
+	/* Params */		(2, PARAM_NUMBER, "Minimum layer index",
+							PARAM_NUMBER, "Maximum layer index")
+) {
+	rdPtr->minLayer = intParam();
+	rdPtr->maxLayer = intParam();
+	rdPtr->rc.rcChanged = true;
+}
 
 // ============================================================================
 //

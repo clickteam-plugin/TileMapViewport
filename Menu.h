@@ -22,6 +22,8 @@
 		SEPARATOR
 		ITEM(2, "Set background color")
 		ITEM(1, "Set size")
+		SEPARATOR
+		ITEM(14, "Set layers to draw")
 	SUB_END
 	SUB_START("Collisions")
 		ITEM(13, "Set collision margin")
