@@ -703,34 +703,33 @@ void WINAPI DLLExport EditorDisplay(mv _far *mV, fpObjInfo oiPtr, fpLevObj loPtr
 {
 #ifndef RUN_ONLY
 
-	// This is a simple case of drawing an image onto MMF's frame editor window
-	// First, we must get a pointer to the surface used by the frame editor
-
 	LPSURFACE ps = WinGetSurface((int)mV->mvIdEditWin);
 	if ( ps != NULL )		// Do the following if this surface exists
 	{
-		ps->SetClipRect(rc->left, rc->top, rc->right-rc->left, rc->bottom-rc->top);
-		srand((long)mV->mvEditFrame + edPtr->width + edPtr->height); /* Prevent the user from having a seizure */
+		//ps->SetClipRect(rc->left, rc->top, rc->right-rc->left, rc->bottom-rc->top);
 
-		///* Get surfaces of tilesets */
+		// Prevent the user from having a seizure
+		//srand((long)mV->mvEditFrame + edPtr->width + edPtr->height); 
+
+		// Get surfaces of tilesets
 		//cSurface surfs[TILESETCOUNT];
 		//for (int i = 0; i < edPtr->tilesetCount; ++i)
 		//{
 		//	LockImageSurface(mV->mvIdAppli, edPtr->tilesets[i], surfs[i]);
 		//}
 	
-		/* Draw opaque background */
+		// Draw opaque background
 		if (!edPtr->transparent)
 			ps->Rectangle(rc->left, rc->top, rc->right, rc->bottom, edPtr->background, 0, 0, 1);
 
-		///* For each tile */
+		//// For each tile
 		//if (edPtr->tileWidth > 0 && edPtr->tileHeight > 0)
 		//{
 		//	for (int x = rc->left; x <= rc->right; x += edPtr->tileWidth)
 		//	{
 		//		for (int y = rc->top; y <= rc->bottom; y += edPtr->tileHeight)
 		//		{
-		//			* Draw a random tile */
+		//			// Draw a random tile
 		//			if (edPtr->tilesetCount)
 		//			{
 		//				int tileset = 0;
@@ -739,7 +738,7 @@ void WINAPI DLLExport EditorDisplay(mv _far *mV, fpObjInfo oiPtr, fpLevObj loPtr
 		//				int ty = rand() % (surfs[tileset].GetHeight() / edPtr->tileHeight);
 		//				surfs[tileset].Blit(*ps, x, y, tx*edPtr->tileWidth, ty*edPtr->tileHeight, edPtr->tileWidth, edPtr->tileHeight, BMODE_TRANSP, BOP_COPY);
 		//			}
-		//			* Draw grid */
+		//			// Draw grid
 		//			else
 		//			{
 		//				ps->Rectangle(x, y, x+edPtr->tileWidth+1, y+edPtr->tileHeight+1, 1, 0x999999);
@@ -748,11 +747,11 @@ void WINAPI DLLExport EditorDisplay(mv _far *mV, fpObjInfo oiPtr, fpLevObj loPtr
 		//	}
 		//}
 		
-		/* Draw border */
+		// Draw border
 		ps->Rectangle(rc->left, rc->top, rc->right, rc->bottom, 1, OPAQUE_BLACK);
 		ps->ClearClipRect();
 
-		///* Unlock stuff */
+		// Unlock stuff
 		//for (int i = 0; i < edPtr->tilesetCount; ++i)
 		//{
 		//	UnlockImageSurface(surfs[i]);

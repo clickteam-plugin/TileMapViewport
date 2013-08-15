@@ -116,7 +116,7 @@ short WINAPI DLLExport DestroyRunObject(LPRDATA rdPtr, long fast)
 }
 
 // ----------------
-// HandleRunObject
+// HandleRunObject	
 // ----------------
 // Called (if you want) each loop, this routine makes the object live
 // 
