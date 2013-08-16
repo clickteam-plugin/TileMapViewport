@@ -129,7 +129,7 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 		for (int y = y1; y <= y2; ++y)
 		{
 			Tile* tile = layer->getTile(x, y);
-			if (tile->x != 0xff && tile->y != 0xff)
+			if (tile->id != Tile::EMPTY)
 			{
 				// Bounding box collisions - we're done
 				if (!fineColl)
@@ -190,7 +190,7 @@ CONDITION(
 	if (!rdPtr->p)
 		return false;
 
-	unsigned int id = (unsigned)param2;
+	unsigned id = (unsigned)param2;
 
 	if (id >= rdPtr->p->layers->size())
 		return false;
@@ -261,25 +261,103 @@ CONDITION(
 	return true;
 }
 
+CONDITION(
+	/* ID */			2,
+	/* Name */			"%o: Point (%0, %1) is solid on layer %2",
+	/* Flags */			EVFLAGS_ALWAYS,
+	/* Params */		(3, PARAM_NUMBER, "X coordinate", PARAM_NUMBER, "Y coordinate", PARAM_NUMBER,"Layer index")
+) {
+	int pixelX = intParam();
+	int pixelY = intParam();
+	unsigned id = intParam();
 
-//CONDITION(
-//	/* ID */			1,
-//	/* Name */			"%o: %0 is overlapping layer %1 (pixel-perfect)",
-//	/* Flags */			EVFLAGS_ALWAYS,
-//	/* Params */		(2, PARAM_OBJECT,"Object", PARAM_NUMBER,"Layer index")
-//) {
-//	long obj = param1;
-//	unsigned int id = (unsigned)param2;
-//
-//	if (id < 0 || id >= rdPtr->layers->size())
-//		return false;
-//
-//	Layer* layer = &(*rdPtr->layers)[id];
-//	if (!layer->isValid())
-//		return false;
-//
-//	return ProcessCondition(rdPtr, obj,(long)layer, cndObjOverlapsLayer);
-//}
+	if (!rdPtr->p)
+		return false;
+
+	if (id >= rdPtr->p->layers->size())
+		return false;
+
+	Layer* layer = &(*rdPtr->p->layers)[id];
+	if (!layer->isValid())
+		return false;
+
+	// Get layer's collision tileset
+	unsigned char tilesetID = (layer->collision != 0xff) ? layer->collision : layer->tileset;
+	if (tilesetID >= rdPtr->p->tilesets->size())
+		return false;
+
+	// Required for fine collisions
+	Tileset* tileset = &(*rdPtr->p->tilesets)[tilesetID];
+	
+	// Store tile size
+	int tileWidth = layer->tileWidth;
+	int tileHeight = layer->tileHeight;
+
+	// Compute layer position on screen
+	int tlX = layer->getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
+	int tlY = layer->getScreenY(rdPtr->cameraY) + rdPtr->rHo.hoRect.top;
+
+	// Get layer size in px
+	int layerWidth = layer->getWidth() * tileWidth;
+	int layerHeight = layer->getHeight() * tileHeight;
+
+	// Not overlapping visible part, exit
+	if (!rdPtr->outsideColl)
+	{
+		if (pixelX < rdPtr->rHo.hoX
+		|| pixelY < rdPtr->rHo.hoY
+		|| pixelX > rdPtr->rHo.hoX + rdPtr->rHo.hoImgWidth
+		|| pixelY > rdPtr->rHo.hoY + rdPtr->rHo.hoImgHeight)
+			return false;
+	}
+
+	// Convert to on-screen coordinates
+	pixelX -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
+	pixelY -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
+
+	// Get the tile that the object overlaps
+	int tilePosX = floordiv(pixelX - tlX, tileWidth);
+	int tilePosY = floordiv(pixelY - tlY, tileHeight);
+
+	// Ensure that the tiles are in the layer
+	int width = layer->getWidth();
+	int height = layer->getHeight();
+
+	// Nothing to do if the object is not within the tile area
+	if (tilePosX < 0 || tilePosY < 0 || tilePosX >= width || tilePosY >= height)
+		return false;
+
+	// Make object coordinates relative to layer's origin
+	pixelX -= tlX;
+	pixelY -= tlY;
+
+	// Check overlapping tile
+	Tile* tile = layer->getTile(tilePosX, tilePosY);
+
+	if (tile->id == Tile::EMPTY)
+		return false;
+
+	// No fine collision? We're done...
+	if (!rdPtr->fineColl)
+		return true;
+
+	// Get the pixel in the tile that we have to check...
+	int tilesetX = pixelX + (tile->x - tilePosX) * tileWidth;
+	int tilesetY = pixelY + (tile->y - tilePosY) * tileHeight;
+
+	cSurface* surface = tileset->surface;
+	bool alpha = surface->HasAlpha() != 0;
+
+	if (alpha)
+	{
+		cSurface* alphaSurf = surface->GetAlphaSurface();
+		bool result = alphaSurf->GetPixelFast8(tilesetX, tilesetY) != 0;
+		surface->ReleaseAlphaSurface(alphaSurf);
+		return result;
+	}
+
+	return surface->GetPixelFast(tilesetX, tilesetY) != surface->GetTransparentColor();
+}
 
 // ============================================================================
 //
@@ -472,7 +550,7 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(1, EXPPARAM_NUMBER, "Layer index")
 ) {
-	unsigned int i = ExParam(TYPE_INT);
+	unsigned i = ExParam(TYPE_INT);
 
 	if (i < rdPtr->p->layers->size())
 	{
@@ -488,7 +566,7 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(1, EXPPARAM_NUMBER, "Layer index")
 ) {
-	unsigned int i = ExParam(TYPE_INT);
+	unsigned i = ExParam(TYPE_INT);
 
 	if (i < rdPtr->p->layers->size())
 	{

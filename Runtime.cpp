@@ -174,17 +174,17 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		target->Fill(rdPtr->background);
 
 	// For all wanted layers...
-	unsigned int layerCount = rdPtr->p->layers->size();
+	unsigned layerCount = rdPtr->p->layers->size();
 
 	if (!layerCount)
 		return 0;
 
-	int minLayer = max(0, min(layerCount - 1, rdPtr->minLayer));
-	int maxLayer = max(0, min(layerCount - 1, rdPtr->maxLayer));
+	unsigned minLayer = max(0, min(layerCount - 1, rdPtr->minLayer));
+	unsigned maxLayer = max(0, min(layerCount - 1, rdPtr->maxLayer));
 
 	if (minLayer <= maxLayer && maxLayer < layerCount)
 	{
-		for (int i = minLayer; i <= maxLayer; ++i)
+		for (unsigned i = minLayer; i <= maxLayer; ++i)
 		{
 			// Get a pointer to the iterated layer
 			Layer* layer = &(*rdPtr->p->layers)[i];

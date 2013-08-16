@@ -46,7 +46,7 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, long (*myFunc)(LP
 			for(int i = 0; i < count; i++)
 			{
 				//Check here
-				if(bool(myFunc(rdPtr,(LPRO)curObj,param2)) == relativeTrue)
+				if((0 != myFunc(rdPtr,(LPRO)curObj,param2)) == relativeTrue)
 				{
 					if(selected++ == 0)
 					{
@@ -110,7 +110,7 @@ long ProcessCondition(LPRDATA rdPtr, long param1, long param2, long (*myFunc)(LP
 		for(int i = 0; i < count; i++)
 		{
 			//Check here
-			if(bool(myFunc(rdPtr,(LPRO)curObj,param2)) == relativeTrue)
+			if((0 != myFunc(rdPtr,(LPRO)curObj,param2)) == relativeTrue)
 			{
 				if(selected++ == 0)
 				{

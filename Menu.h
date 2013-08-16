@@ -5,7 +5,8 @@
 #ifdef CONDITION_MENU
 
 	SEPARATOR
-	ITEM(0,"Object is overlapping layer ?")
+	ITEM(0, "Object is overlapping layer ?")
+	ITEM(2, "Pixel is solid ?")
 	SEPARATOR
 	ITEM(1,"On tile (before rendering)")
 #endif
