@@ -370,7 +370,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								float angle = rdPtr->callback.angle;
 
 								POINT center = {tileWidth/2, tileHeight/2};
-								tileSurf->BlitEx(*target, screenX+offsetX+center.x, screenY+offsetY+center.y, scaleX, scaleY, tile->x*tileWidth, tile->y*tileHeight, tileWidth, tileHeight,
+								tileSurf->BlitEx(*target, screenX+offsetX+center.x, screenY+offsetY+center.y, scaleX, scaleY, tile.x*tileWidth, tile.y*tileHeight, tileWidth, tileHeight,
 									&center, angle, BMODE_TRANSP, blitOp, blitParam);
 							}
 #endif
