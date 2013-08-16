@@ -46,16 +46,16 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	int tileHeight = layer->tileHeight;
 
 	// Compute layer position on screen
-	int tlX = getLayerX(rdPtr, layer) + rdPtr->rHo.hoRect.left;
-	int tlY = getLayerY(rdPtr, layer) + rdPtr->rHo.hoRect.top;
+	int tlX = layer->getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
+	int tlY = layer->getScreenY(rdPtr->cameraY) + rdPtr->rHo.hoRect.top;
 
 	// Get object coordinates
 	int objX = obj->hoX - obj->hoImgXSpot;
 	int objY = obj->hoY - obj->hoImgYSpot;
 
 	// Get layer size in px
-	int layerWidth = layer->width * tileWidth;
-	int layerHeight = layer->height * tileHeight;
+	int layerWidth = layer->getWidth() * tileWidth;
+	int layerHeight = layer->getHeight() * tileHeight;
 
 	// Not overlapping visible part, exit
 	if (!rdPtr->outsideColl)
@@ -101,8 +101,8 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 
 
 	// Ensure that the tiles are in the layer
-	int width = layer->width;
-	int height = layer->height;
+	int width = layer->getWidth();
+	int height = layer->getHeight();
 
 
 	// Nothing to do if the object is not within the tile area
@@ -128,7 +128,7 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	{
 		for (int y = y1; y <= y2; ++y)
 		{
-			Tile* tile = layer->get(x, y);
+			Tile* tile = layer->getTile(x, y);
 			if (tile->x != 0xff && tile->y != 0xff)
 			{
 				// Bounding box collisions - we're done
@@ -358,8 +358,11 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(2, PARAM_NUMBER,"Tileset X", PARAM_NUMBER,"Tileset Y")
 ) {
-	rdPtr->callback.tile.x = (unsigned char)intParam();
-	rdPtr->callback.tile.y = (unsigned char)intParam();
+	if (rdPtr->callback.tile)
+	{
+		rdPtr->callback.tile->x = (unsigned char)intParam();
+		rdPtr->callback.tile->y = (unsigned char)intParam();
+	}
 }
 
 
@@ -473,7 +476,7 @@ EXPRESSION(
 
 	if (i < rdPtr->p->layers->size())
 	{
-		return getLayerX(rdPtr, &(*rdPtr->p->layers)[i]);
+		return (*rdPtr->p->layers)[i].getScreenX(rdPtr->cameraX);
 	}
 	
 	return 0;
@@ -489,7 +492,7 @@ EXPRESSION(
 
 	if (i < rdPtr->p->layers->size())
 	{
-		return getLayerY(rdPtr, &(*rdPtr->p->layers)[i]);
+		return (*rdPtr->p->layers)[i].getScreenY(rdPtr->cameraY);
 	}
 	
 	return 0;
@@ -520,7 +523,7 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	return rdPtr->callback.tile.x;
+	return rdPtr->callback.tile ? rdPtr->callback.tile->x : -1;
 }
 
 EXPRESSION(
@@ -529,5 +532,5 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	return rdPtr->callback.tile.y;
+	return rdPtr->callback.tile ? rdPtr->callback.tile->x : -1;
 }

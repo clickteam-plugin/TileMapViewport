@@ -29,16 +29,6 @@ using namespace std;
 #include <d3d9.h>
 #endif
 
-inline int getLayerX(LPRDATA rdPtr, Layer* layer)
-{
-	return (int)((layer->offsetX - rdPtr->cameraX) * layer->scrollX);
-}
-
-inline int getLayerY(LPRDATA rdPtr, Layer* layer)
-{
-	return (int)((layer->offsetY - rdPtr->cameraY) * layer->scrollY);
-}
-
 // Globals and prototypes
 extern HINSTANCE hInstLib;
 extern short * conditionsInfos;
