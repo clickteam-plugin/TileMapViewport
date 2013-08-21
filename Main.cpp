@@ -264,7 +264,7 @@ CONDITION(
 CONDITION(
 	/* ID */			2,
 	/* Name */			"%o: Point (%0, %1) is solid on layer %2",
-	/* Flags */			EVFLAGS_ALWAYS,
+	/* Flags */			EVFLAGS_ALWAYS|EVFLAGS_NOTABLE,
 	/* Params */		(3, PARAM_NUMBER, "X coordinate", PARAM_NUMBER, "Y coordinate", PARAM_NUMBER,"Layer index")
 ) {
 	int pixelX = intParam();
@@ -346,6 +346,10 @@ CONDITION(
 	int tilesetY = pixelY + (tile->y - tilePosY) * tileHeight;
 
 	cSurface* surface = tileset->surface;
+
+	if (!surface)
+		return false;
+
 	bool alpha = surface->HasAlpha() != 0;
 
 	if (alpha)
@@ -537,6 +541,15 @@ ACTION(
 	rdPtr->rc.rcChanged = true;
 }
 
+ACTION(
+	/* ID */			15,
+	/* Name */			"Set tile tileset index to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Tileset index (0-255)")
+) {
+	rdPtr->callback.tileset = (BYTE)intParam();
+}
+
 // ============================================================================
 //
 // EXPRESSIONS
@@ -546,7 +559,7 @@ ACTION(
 
 EXPRESSION(
 	/* ID */			0,
-	/* Name */			"LayerX(",
+	/* Name */			"LayerViewportX(",
 	/* Flags */			0,
 	/* Params */		(1, EXPPARAM_NUMBER, "Layer index")
 ) {
@@ -562,7 +575,7 @@ EXPRESSION(
 
 EXPRESSION(
 	/* ID */			1,
-	/* Name */			"LayerY(",
+	/* Name */			"LayerViewportY(",
 	/* Flags */			0,
 	/* Params */		(1, EXPPARAM_NUMBER, "Layer index")
 ) {
@@ -611,4 +624,84 @@ EXPRESSION(
 	/* Params */		(0)
 ) {
 	return rdPtr->callback.tile ? rdPtr->callback.tile->x : -1;
+}
+
+EXPRESSION(
+	/* ID */			6,
+	/* Name */			"Screen2LayerX(",
+	/* Flags */			0,
+	/* Params */		(2, EXPPARAM_NUMBER, "Layer index", EXPPARAM_NUMBER, "On-screen X")
+) {
+	int layerIndex = ExParam(TYPE_INT);
+	int screen = ExParam(TYPE_INT);
+
+	if (layerIndex < rdPtr->p->layers->size())
+	{
+		Layer& layer = (*rdPtr->p->layers)[layerIndex];
+		screen -= rdPtr->rHo.hoX;
+		screen += (rdPtr->cameraX - layer.offsetX) * layer.scrollX;
+		screen /= layer.tileWidth;
+
+		return screen;
+	}
+
+	return 0;
+}
+
+EXPRESSION(
+	/* ID */			7,
+	/* Name */			"Screen2LayerY(",
+	/* Flags */			0,
+	/* Params */		(2, EXPPARAM_NUMBER, "Layer index", EXPPARAM_NUMBER, "On-screen Y")
+) {
+	int layerIndex = ExParam(TYPE_INT);
+	int screen = ExParam(TYPE_INT);
+
+	if (layerIndex < rdPtr->p->layers->size())
+	{
+		Layer& layer = (*rdPtr->p->layers)[layerIndex];
+		screen -= rdPtr->rHo.hoY;
+		screen += (rdPtr->cameraY - layer.offsetY) * layer.scrollY;
+		screen /= layer.tileHeight;
+
+		return screen;
+	}
+
+	return 0;
+}
+
+EXPRESSION(
+	/* ID */			8,
+	/* Name */			"Layer2ScreenX(",
+	/* Flags */			0,
+	/* Params */		(2, EXPPARAM_NUMBER, "Layer index" , EXPPARAM_NUMBER, "Tile X")
+) {
+	unsigned i = ExParam(TYPE_INT);
+	unsigned pos = ExParam(TYPE_INT);
+
+	if (i < rdPtr->p->layers->size())
+	{
+		Layer& layer = (*rdPtr->p->layers)[i];
+		return rdPtr->rHo.hoX + layer.getScreenX(rdPtr->cameraX) + layer.tileWidth * pos;
+	}
+	
+	return 0;
+}
+
+EXPRESSION(
+	/* ID */			9,
+	/* Name */			"Layer2ScreenY(",
+	/* Flags */			0,
+	/* Params */		(2, EXPPARAM_NUMBER, "Layer index" , EXPPARAM_NUMBER, "Tile X")
+) {
+	unsigned i = ExParam(TYPE_INT);
+	unsigned pos = ExParam(TYPE_INT);
+
+	if (i < rdPtr->p->layers->size())
+	{
+		Layer& layer = (*rdPtr->p->layers)[i];
+		return rdPtr->rHo.hoY + layer.getScreenY(rdPtr->cameraY) + layer.tileHeight * pos;
+	}
+	
+	return 0;
 }

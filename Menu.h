@@ -37,9 +37,11 @@
 		ITEM(7, "Set tile render overflow")
 	SUB_END
 	SUB_START("On tile")
-		ITEM(11, "Set opacity")
-		ITEM(3, "Set offset")
 		ITEM(6, "Set tile")
+		ITEM(15, "Set tileset")
+		SEPARATOR
+		ITEM(3, "Set offset")
+		ITEM(11, "Set opacity")
 		SEPARATOR
 		SUB_START("HWA only")
 			ITEM(12, "Set tint")
@@ -69,9 +71,17 @@
 	SUB_END
 	SEPARATOR
 	SUB_START("Layer")
-		SUB_START("On-screen position")
+		SUB_START("Viewport render position")
 			ITEM(0, "X")
 			ITEM(1, "Y")
+		SUB_END
+		SUB_START("On-screen to layer position")
+			ITEM(6, "X")
+			ITEM(7," Y")
+		SUB_END
+		SUB_START("Layer to on-screen position")
+			ITEM(8, "X")
+			ITEM(9, "Y")
 		SUB_END
 	SUB_END
 	SEPARATOR

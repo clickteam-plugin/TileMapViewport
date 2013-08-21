@@ -179,6 +179,11 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	if (!layerCount)
 		return 0;
 
+	// Cache all tileset pointers for faster access
+	cSurface* tilesetCache[256] = {};
+	for (unsigned i = 0; i < rdPtr->p->tilesets->size(); ++i)
+		tilesetCache[i] = (*rdPtr->p->tilesets)[i].texture;
+
 	unsigned minLayer = max(0, min(layerCount - 1, rdPtr->minLayer));
 	unsigned maxLayer = max(0, min(layerCount - 1, rdPtr->maxLayer));
 
@@ -199,16 +204,6 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
 			// Can't render
 			if (!tileWidth || !tileHeight)
-				continue;
-
-			// Get tileset
-			if (layer->tileset >= rdPtr->p->tilesets->size())
-				continue;
-			Tileset* tileset = &(*rdPtr->p->tilesets)[layer->tileset];	
-
-			// Get the associated tileset image
-			cSurface* tileSurf = tileset->texture;
-			if (!tileSurf)
 				continue;
 
 			// Store the layer size
@@ -276,6 +271,11 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			// If can render
 			if (x2-x1 > 0 && y2-y1 > 0)
 			{
+				// Cache for sub-layers - hard-coded limit of 10 right now, doubt someone will need more
+				SubLayer* subLayerCache[10] = {};
+				for (unsigned s = 0; s < 10 && s < layer->subLayers.size(); ++s)
+					subLayerCache[s] = &layer->subLayers[s];
+
 				// Per-tile offset (for callbacks)
 				int offsetX = 0, offsetY = 0;
 
@@ -299,6 +299,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							if (tile.id == Tile::EMPTY)
 								break;
 
+							unsigned char tilesetIndex = layer->tileset;
+
 							// Determine tile opacity
 							BlitOp blitOp = layer->opacity < 0.999f ? BOP_BLEND : BOP_COPY;
 							float opacity = layer->opacity;
@@ -309,6 +311,9 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							{
 								// We need to map the tile to rdPtr so we can modify its values before rendering
 								rdPtr->callback.tile = &tile;
+
+								// Store tileset index which may be changed by the user
+								rdPtr->callback.tileset = tilesetIndex;
 
 								// Reset some values
 								rdPtr->callback.visible = true;
@@ -334,6 +339,9 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								if (!rdPtr->callback.visible)
 									break;
 
+								// Apply tileset index
+								tilesetIndex = rdPtr->callback.tileset;
+
 								// Apply offset
 								offsetX = rdPtr->callback.offsetX;
 								offsetY = rdPtr->callback.offsetY;
@@ -355,6 +363,11 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 									blitParam = 128 - int(opacity * 128);
 								}
 							}
+
+							cSurface* tileSurf = tilesetCache[tilesetIndex];
+
+							if (!tileSurf)
+								continue;
 
 							// Blit from the surface of the tileset with the tile's index in the layer tilesets
 							if (!clip)
