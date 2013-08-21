@@ -37,7 +37,7 @@ PROPS_DATA_START()
 
 	PropData_Group(PROPID_GRP_DISPLAY, (int)"Display", (int)""),
 	PropData_CheckBox(PROPID_TRANSPARENT, (int)"Transparent", (int)"Use with caution - a background may greatly increase the FPS."),
-	PropData_CheckBox(PROPID_ACCURATECLIP, (int)"Accurate clipping", (int)"Disable accurate clipping of tiles within the viewport area. Disabling may increase FPS. If your viewport covers the whole screen, you can safely turn this off."),
+	PropData_CheckBox(PROPID_ACCURATECLIP, (int)"Accurate clipping", (int)"Enable accurate clipping of tiles on the border of the viewport area. Disabling may increase FPS. If your viewport covers the whole screen, you can safely turn this off."),
 	PropData_CheckBox(PROPID_AUTOSCROLL, (int)"Follow MMF camera", (int)"The Tile Map automatically follows the MMF camera."),
 
 	PropData_Group(PROPID_GRP_COLL, (int)"Collisions", (int)""),
