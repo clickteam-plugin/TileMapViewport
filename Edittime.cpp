@@ -19,6 +19,7 @@ PROPS_IDS_START()
 	PROPID_AUTOSCROLL,
 	PROPID_TRANSPARENT,
 	PROPID_ACCURATECLIP,
+	PROPID_ANIMMODE,
 	//PROPID_TRANSPCOLOR,
 	PROPID_BGCOLOR,
 
@@ -32,6 +33,15 @@ PROPS_IDS_START()
 
 PROPS_IDS_END()
 
+const char* animModes[] =
+{
+	0,
+	"Custom",
+	"Elapsed time",
+	"Fixed framerate",
+	0,
+};
+
 PROPS_DATA_START()
 
 
@@ -39,6 +49,7 @@ PROPS_DATA_START()
 	PropData_CheckBox(PROPID_TRANSPARENT, (int)"Transparent", (int)"Use with caution - a background may greatly increase the FPS."),
 	PropData_CheckBox(PROPID_ACCURATECLIP, (int)"Accurate clipping", (int)"Enable accurate clipping of tiles on the border of the viewport area. Disabling may increase FPS. If your viewport covers the whole screen, you can safely turn this off."),
 	PropData_CheckBox(PROPID_AUTOSCROLL, (int)"Follow MMF camera", (int)"The Tile Map automatically follows the MMF camera."),
+	PropData_ComboBox(PROPID_ANIMMODE, (int)"Animation mode", (int)"Determines how the animation time is computed. 0: User-specified (via action). 1: By the actual elapsed time of the current frame. 2: By the configured application framerate.", animModes),
 
 	PropData_Group(PROPID_GRP_COLL, (int)"Collisions", (int)""),
 	PropData_CheckBox(PROPID_OUTSIDECOLL, (int)"Handle outside of viewport", (int)"Collisions with tiles are handled even if they aren't within the viewport."),
@@ -172,8 +183,8 @@ LPVOID WINAPI DLLExport GetPropValue(LPMV mV, LPEDATA edPtr, UINT nPropID)
 		return new CPropIntValue(edPtr->minLayer);
 	case PROPID_MAXLAYER:
 		return new CPropIntValue(edPtr->maxLayer);
-	//case PROPID_TRANSPCOLOR:
-	//	return new CPropDWordValue(edPtr->transpColor);
+	case PROPID_ANIMMODE:
+		return new CPropDWordValue(edPtr->animMode);
 	}
 #endif // !RUN_ONLY
 	return NULL;
@@ -233,6 +244,10 @@ void WINAPI DLLExport SetPropValue(LPMV mV, LPEDATA edPtr, UINT nPropID, LPVOID 
 
 		case PROPID_BGCOLOR:
 			edPtr->background = ((CPropDWordValue*)pValue)->m_dwValue;
+			mvInvalidateObject(mV,edPtr);
+			break;
+		case PROPID_ANIMMODE:
+			edPtr->animMode = ((CPropDWordValue*)pValue)->m_dwValue;
 			mvInvalidateObject(mV,edPtr);
 			break;
 		case PROPID_MINLAYER:
@@ -573,6 +588,7 @@ int WINAPI DLLExport CreateObject(mv _far *mV, fpLevObj loPtr, LPEDATA edPtr)
 
 	edPtr->transparent = false;
 	edPtr->accurateClip = true;
+	edPtr->animMode = 1;
 	edPtr->background = 0xffffff;
 	//edPtr->transpColor = 0xff00ff;
 
