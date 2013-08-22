@@ -378,7 +378,7 @@ CONDITION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_COMPARAISON, "Layer index")
 ) {
-	return rdPtr->callback.layerIndex;
+	return rdPtr->layerCallback.index;
 }
 
 // ============================================================================
@@ -427,8 +427,11 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(2, PARAM_NUMBER,"X offset (pixels)", PARAM_NUMBER,"Y offset (pixels)")
 ) {
-	rdPtr->callback.offsetX = intParam();
-	rdPtr->callback.offsetY = intParam();
+	if (rdPtr->tileCallback.settings)
+	{
+		rdPtr->tileCallback.settings->offsetX = intParam();
+		rdPtr->tileCallback.settings->offsetY = intParam();
+	}
 }
 
 ACTION(
@@ -437,7 +440,7 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	rdPtr->callback.useTile = true;
+	rdPtr->tileCallback.use = true;
 	rdPtr->rc.rcChanged = true;
 }
 
@@ -447,7 +450,7 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	rdPtr->callback.useTile = false;
+	rdPtr->tileCallback.use = false;
 	rdPtr->rc.rcChanged = true;
 }
 
@@ -457,25 +460,25 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(2, PARAM_NUMBER,"Tileset X", PARAM_NUMBER,"Tileset Y")
 ) {
-	if (rdPtr->callback.tile)
+	if (rdPtr->tileCallback.tile)
 	{
-		rdPtr->callback.tile->x = (unsigned char)intParam();
-		rdPtr->callback.tile->y = (unsigned char)intParam();
+		rdPtr->tileCallback.tile->x = (unsigned char)intParam();
+		rdPtr->tileCallback.tile->y = (unsigned char)intParam();
 	}
 }
 
 
 ACTION(
 	/* ID */			7,
-	/* Name */			"Set callback tile overflow to (%0, %1)",
+	/* Name */			"Set tileCallback tile overflow to (%0, %1)",
 	/* Flags */			0,
 	/* Params */		(2, PARAM_NUMBER, "Number of extra tile columns to render on each side (Default: 0)",
 							PARAM_NUMBER, "Number of extra tile rows to render on each side (Default: 0)")
 ) {
-	rdPtr->callback.borderX = intParam();
-	rdPtr->callback.borderY = intParam();
-	rdPtr->callback.borderX = max(0, min(1000, rdPtr->callback.borderX));
-	rdPtr->callback.borderY = max(0, min(1000, rdPtr->callback.borderY));
+	rdPtr->tileCallback.borderX = intParam();
+	rdPtr->tileCallback.borderY = intParam();
+	rdPtr->tileCallback.borderX = max(0, min(1000, rdPtr->tileCallback.borderX));
+	rdPtr->tileCallback.borderY = max(0, min(1000, rdPtr->tileCallback.borderY));
 	rdPtr->rc.rcChanged = true;
 }
 
@@ -486,8 +489,11 @@ ACTION(
 	/* Params */		(1, PARAM_NUMBER,"Angle (0-360)")
 ) {
 #ifdef HWABETA
-	rdPtr->callback.transform = true;
-	rdPtr->callback.angle = fltParam();
+	if (rdPtr->tileCallback.settings)
+	{
+		rdPtr->tileCallback.settings->transform = true;
+		rdPtr->tileCallback.settings->angle = fltParam();
+	}
 #endif
 }
 
@@ -498,8 +504,11 @@ ACTION(
 	/* Params */		(1, PARAM_NUMBER,"X scale (1.0 = Default)")
 ) {
 #ifdef HWABETA
-	rdPtr->callback.transform = true;
-	rdPtr->callback.scaleX = fltParam();
+	if (rdPtr->tileCallback.settings)
+	{
+		rdPtr->tileCallback.settings->transform = true;
+		rdPtr->tileCallback.settings->scaleX = fltParam();
+	}
 #endif
 }
 
@@ -510,8 +519,11 @@ ACTION(
 	/* Params */		(1, PARAM_NUMBER,"Y scale (1.0 = Default)")
 ) {
 #ifdef HWABETA
-	rdPtr->callback.transform = true;
-	rdPtr->callback.scaleY = fltParam();
+	if (rdPtr->tileCallback.settings)
+	{
+		rdPtr->tileCallback.settings->transform = true;
+		rdPtr->tileCallback.settings->scaleY = fltParam();
+	}
 #endif
 }
 
@@ -521,7 +533,8 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Opacity (0-1, 1 = Default)")
 ) {
-	rdPtr->callback.opacity = fltParam();
+	if (rdPtr->tileCallback.settings)
+		rdPtr->tileCallback.settings->opacity = fltParam();
 }
 
 ACTION(
@@ -530,7 +543,8 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_COLOUR, "Tint (White = Default)")
 ) {
-	rdPtr->callback.tint = anyParam();
+	if (rdPtr->tileCallback.settings)
+		rdPtr->tileCallback.settings->tint = anyParam();
 }
 
 ACTION(
@@ -564,7 +578,8 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Tileset index (0-255)")
 ) {
-	rdPtr->callback.tileset = (BYTE)intParam();
+	if (rdPtr->tileCallback.settings)
+		rdPtr->tileCallback.settings->tileset = (BYTE)intParam();
 }
 
 ACTION(
@@ -593,7 +608,7 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	rdPtr->callback.useLayer = true;
+	rdPtr->layerCallback.use = true;
 	rdPtr->rc.rcChanged = true;
 }
 
@@ -603,7 +618,7 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	rdPtr->callback.useLayer = false;
+	rdPtr->layerCallback.use = false;
 	rdPtr->rc.rcChanged = true;
 }
 
@@ -613,10 +628,10 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Opacity (0.0-1.0)")
 ) {
-	if (rdPtr->callback.settings)
+	if (rdPtr->layerCallback.settings)
 	{
 		float o = fltParam();
-		rdPtr->callback.settings->opacity = max(0, min(1, o));
+		rdPtr->layerCallback.settings->opacity = max(0, min(1, o));
 	}
 }
 
@@ -626,9 +641,9 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Tileset index (0-255)")
 ) {
-	if (rdPtr->callback.settings)
+	if (rdPtr->layerCallback.settings)
 	{
-		rdPtr->callback.settings->tileset = (unsigned char)intParam();
+		rdPtr->layerCallback.settings->tileset = (unsigned char)intParam();
 	}
 }
 
@@ -638,10 +653,10 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(2, PARAM_NUMBER,"Offset X (pixels)", PARAM_NUMBER,"Offset Y (pixels)")
 ) {
-	if (rdPtr->callback.settings)
+	if (rdPtr->layerCallback.settings)
 	{	
-		rdPtr->callback.settings->offsetX = (short)intParam();
-		rdPtr->callback.settings->offsetY = (short)intParam();
+		rdPtr->layerCallback.settings->offsetX = (short)intParam();
+		rdPtr->layerCallback.settings->offsetY = (short)intParam();
 	}
 }
 
@@ -651,9 +666,9 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Visible (0: No, 1: Yes)")
 ) {
-	if (rdPtr->callback.settings)
+	if (rdPtr->layerCallback.settings)
 	{
-		rdPtr->callback.settings->visible = intParam() != 0;
+		rdPtr->layerCallback.settings->visible = intParam() != 0;
 	}
 }
 
@@ -703,7 +718,7 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	return rdPtr->callback.x;
+	return rdPtr->tileCallback.x;
 }
 
 EXPRESSION(
@@ -712,7 +727,7 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	return rdPtr->callback.y;
+	return rdPtr->tileCallback.y;
 }
 
 EXPRESSION(
@@ -721,7 +736,7 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	return rdPtr->callback.tile ? rdPtr->callback.tile->x : -1;
+	return rdPtr->tileCallback.tile ? rdPtr->tileCallback.tile->x : -1;
 }
 
 EXPRESSION(
@@ -730,7 +745,7 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	return rdPtr->callback.tile ? rdPtr->callback.tile->x : -1;
+	return rdPtr->tileCallback.tile ? rdPtr->tileCallback.tile->y : -1;
 }
 
 EXPRESSION(
@@ -828,5 +843,5 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	return rdPtr->callback.layerIndex;
+	return rdPtr->layerCallback.index;
 }

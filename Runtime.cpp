@@ -105,10 +105,11 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	rdPtr->autoScroll = edPtr->autoScroll;
 
 	// Initialize callbacks
-	rdPtr->callback.useTile = false;
-	rdPtr->callback.useLayer = false;
-	rdPtr->callback.tile = 0;
-	rdPtr->callback.settings = 0;
+	rdPtr->tileCallback.use = false;
+	rdPtr->tileCallback.settings = 0;
+	rdPtr->tileCallback.tile = 0;
+	rdPtr->layerCallback.use = false;
+	rdPtr->layerCallback.settings = 0;
 
 	return 0;
 }
@@ -154,7 +155,7 @@ short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 	}
 
 	// We redraw every frame if callbacks are enabled
-	if (rdPtr->callback.useTile)
+	if (rdPtr->tileCallback.use || rdPtr->layerCallback.use)
 		rdPtr->rc.rcChanged = true;
 
 	// Unlink if deleted
@@ -227,10 +228,10 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			// Store layer settings locally
 			LayerSettings settings = layer.settings;
 
-			if (rdPtr->callback.useLayer)
+			if (rdPtr->layerCallback.use)
 			{
-				rdPtr->callback.layerIndex = i;
-				rdPtr->callback.settings = &settings;
+				rdPtr->layerCallback.index = i;
+				rdPtr->layerCallback.settings = &settings;
 
 				generateEvent(3);
 				generateEvent(4);
@@ -267,8 +268,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			int y2 = layerHeight;
 
 			// Additional tiles to render outside of the visible area
-			int borderX = 1 + (rdPtr->callback.useTile ? rdPtr->callback.borderX : 0);
-			int borderY = 1 + (rdPtr->callback.useTile ? rdPtr->callback.borderY : 0);
+			int borderX = 1 + (rdPtr->tileCallback.use ? rdPtr->tileCallback.borderX : 0);
+			int borderY = 1 + (rdPtr->tileCallback.use ? rdPtr->tileCallback.borderY : 0);
 
 			// Optimize drawing region
 			while (tlX <= -tileWidth*borderX)
@@ -318,10 +319,14 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 				for (unsigned s = 0; s < 10 && s < layer.subLayers.size(); ++s)
 					subLayerCache[s] = &layer.subLayers[s];
 
+
+				// Initialize default render settings of tile
+				TileSettings tileSettings;
+
 				// Per-tile offset (for callbacks)
 				int offsetX = 0, offsetY = 0;
 
-				// For every v	isible tile...
+				// For every visible tile...
 				int screenY = onScreenY;
 				for (int y = y1; y < y2; ++y)
 				{
@@ -349,53 +354,43 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							LPARAM blitParam = 128 - int(opacity * 128);
 
 							// We use callbacks, so let the programmer do stuff
-							if (rdPtr->callback.useTile)
+							if (rdPtr->tileCallback.use)
 							{
-								// We need to map the tile to rdPtr so we can modify its values before rendering
-								rdPtr->callback.tile = &tile;
+								// Reset the tile settings - the last callback might have changed them
+								tileSettings = TileSettings();
 
-								// Store tileset index which may be changed by the user
-								rdPtr->callback.tileset = tilesetIndex;
+								rdPtr->tileCallback.settings = &tileSettings;
+								tileSettings.tileset = tilesetIndex;
 
-								// Reset some values
-								rdPtr->callback.visible = true;
-								rdPtr->callback.opacity = 1.0f;
-								rdPtr->callback.offsetX = 0;
-								rdPtr->callback.offsetY = 0;
-
-								// HWA specific
-								rdPtr->callback.tint = WHITE;
-								rdPtr->callback.transform = false;
-								rdPtr->callback.scaleX = 1.0f;
-								rdPtr->callback.scaleY = 1.0f;
-								rdPtr->callback.angle = 0.0f;
+								// Allow modification of tile values
+								rdPtr->tileCallback.tile = &tile;
 
 								// Grant access to tile position
-								rdPtr->callback.x = x;
-								rdPtr->callback.y = y;
+								rdPtr->tileCallback.x = x;
+								rdPtr->tileCallback.y = y;
 
 								// Call condition so the programmer can modify the values
 								generateEvent(1);
 
 								// Decided not to render tile...
-								if (!rdPtr->callback.visible)
+								if (!tileSettings.visible)
 									break;
 
 								// Apply tileset index
-								tilesetIndex = rdPtr->callback.tileset;
+								tilesetIndex = tileSettings.tileset;
 
 								// Apply offset
-								offsetX = rdPtr->callback.offsetX;
-								offsetY = rdPtr->callback.offsetY;
+								offsetX = tileSettings.offsetX;
+								offsetY = tileSettings.offsetY;
 
 								// Apply opacity
-								opacity *= rdPtr->callback.opacity;
+								opacity *= tileSettings.opacity;
 
 								// Compute blit operation
-								if (rdPtr->callback.tint != WHITE)
+								if (tileSettings.tint != WHITE)
 								{
 									blitOp = BOP_RGBAFILTER;
-									int rgb = rdPtr->callback.tint & 0xffffff;
+									int rgb = tileSettings.tint & 0xffffff;
 									rgb = ((rgb & 0xff) << 16) | (rgb & 0xff00) | ((rgb & 0xff0000) >> 16);
 									blitParam = rgb | (int(opacity * 255) << 24);
 								}
@@ -411,24 +406,26 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							if (!tileSurf)
 								continue;
 
+#ifdef HWABETA
+							// HWA only: tile angle and scale on callback. Disables accurate clipping!
+							if (tileSettings.transform)
+							{
+								float scaleX = tileSettings.scaleX;
+								float scaleY = tileSettings.scaleY;
+								float angle = tileSettings.angle;
+
+								POINT center = {tileWidth/2, tileHeight/2};
+								tileSurf->BlitEx(*target, screenX+offsetX+center.x, screenY+offsetY+center.y, scaleX, scaleY, tile.x*tileWidth, tile.y*tileHeight, tileWidth, tileHeight,
+									&center, angle, BMODE_TRANSP, blitOp, blitParam);
+								continue;
+							}
+#endif
+							
 							// Blit from the surface of the tileset with the tile's index in the layer tilesets
 							if (!clip)
 							{
 								tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile.x * tileWidth, tile.y * tileHeight, tileWidth, tileHeight, BMODE_TRANSP, blitOp, blitParam);
 							}
-#ifdef HWABETA
-							// HWA only: tile angle and scale on callback. Disables accurate clipping!
-							else if (rdPtr->callback.transform)
-							{
-								float scaleX = rdPtr->callback.scaleX;
-								float scaleY = rdPtr->callback.scaleY;
-								float angle = rdPtr->callback.angle;
-
-								POINT center = {tileWidth/2, tileHeight/2};
-								tileSurf->BlitEx(*target, screenX+offsetX+center.x, screenY+offsetY+center.y, scaleX, scaleY, tile.x*tileWidth, tile.y*tileHeight, tileWidth, tileHeight,
-									&center, angle, BMODE_TRANSP, blitOp, blitParam);
-							}
-#endif
 
 							// Before blitting, perform clipping so that we won't draw outside of the viewport...
 							else
@@ -499,8 +496,9 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	WinAddZone(rdPtr->rHo.hoAdRunHeader->rhIdEditWin, &rdPtr->rHo.hoRect);
 
 	// Clear pointers...
-	rdPtr->callback.tile = 0;
-	rdPtr->callback.settings = 0;
+	rdPtr->tileCallback.settings = 0;
+	rdPtr->tileCallback.tile = 0;
+	rdPtr->layerCallback.settings = 0;
 
 	return 0;
 }
