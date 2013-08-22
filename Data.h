@@ -22,7 +22,8 @@ typedef struct tagEDATA_V1
 	bool			outsideColl : 1;
 	bool			fineColl : 1;
 	bool			accurateClip : 1;
-	bool			__boolPadding : 5;
+	BYTE			animMode : 2;
+	bool			__boolPadding : 3;
 
 } EDITDATA;
 typedef EDITDATA * LPEDATA;

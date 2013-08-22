@@ -73,6 +73,18 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 
 #endif
 
+	// Animation settings
+	rdPtr->lastTick = GetTickCount();
+	rdPtr->animMode = edPtr->animMode;
+	for (int i = 0; i < 256; ++i)
+	{
+		memset(&rdPtr->anim[i], 0, sizeof(Animation));
+		rdPtr->anim[i].speed = 16.0f;
+		rdPtr->anim[i].width = 4;
+		rdPtr->anim[i].height = 4;
+	}
+	rdPtr->animTime = 0;
+
 	// Background settings
 	rdPtr->transparent = edPtr->transparent;
 	rdPtr->background = edPtr->background;
@@ -93,8 +105,10 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	rdPtr->autoScroll = edPtr->autoScroll;
 
 	// Initialize callbacks
-	rdPtr->callback.use = false;
+	rdPtr->callback.useTile = false;
+	rdPtr->callback.useLayer = false;
 	rdPtr->callback.tile = 0;
+	rdPtr->callback.settings = 0;
 
 	return 0;
 }
@@ -123,8 +137,24 @@ short WINAPI DLLExport DestroyRunObject(LPRDATA rdPtr, long fast)
 // 
 short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 {
+	// Update animation timer
+	if (rdPtr->animMode == 1)
+	{
+		DWORD tick = GetTickCount();
+
+		// Get elapsed time
+		rdPtr->animTime += (tick - rdPtr->lastTick) / 1000.0;
+
+		rdPtr->lastTick = tick;
+	}
+	else if (rdPtr->animMode == 2)
+	{
+		// Fixed framerate
+		rdPtr->animTime += 1 / (double)rdPtr->rHo.hoAdRunHeader->rhApp->m_hdr.gaFrameRate;
+	}
+
 	// We redraw every frame if callbacks are enabled
-	if (rdPtr->callback.use)
+	if (rdPtr->callback.useTile)
 		rdPtr->rc.rcChanged = true;
 
 	// Unlink if deleted
@@ -192,31 +222,43 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		for (unsigned i = minLayer; i <= maxLayer; ++i)
 		{
 			// Get a pointer to the iterated layer
-			Layer* layer = &(*rdPtr->p->layers)[i];
+			Layer& layer = (*rdPtr->p->layers)[i];
+
+			// Store layer settings locally
+			LayerSettings settings = layer.settings;
+
+			if (rdPtr->callback.useLayer)
+			{
+				rdPtr->callback.layerIndex = i;
+				rdPtr->callback.settings = &settings;
+
+				generateEvent(3);
+				generateEvent(4);
+			}
 
 			// No data to draw or simply invisible
-			if (!layer->isValid() || !layer->visible)
+			if (!layer.isValid() || !settings.visible)
 				continue;
 			
-			// Store drawing settings for fast access
-			unsigned short tileWidth = layer->tileWidth;
-			unsigned short tileHeight = layer->tileHeight;
+			// We'll need these so often...
+			unsigned short tileWidth = settings.tileWidth;
+			unsigned short tileHeight = settings.tileHeight;
 
 			// Can't render
 			if (!tileWidth || !tileHeight)
 				continue;
 
 			// Store the layer size
-			int layerWidth = layer->getWidth();
-			int layerHeight = layer->getHeight();
+			int layerWidth = layer.getWidth();
+			int layerHeight = layer.getHeight();
 
 			// On-screen coordinate
-			int tlX = layer->getScreenX(rdPtr->cameraX);
-			int tlY = layer->getScreenY(rdPtr->cameraY);
+			int tlX = layer.getScreenX(rdPtr->cameraX);
+			int tlY = layer.getScreenY(rdPtr->cameraY);
 
 			// See if the layer is visible at all
-			if ((!layer->wrapX && (tlX >= width  || tlX + tileWidth  * layerWidth  < 0))
-			||  (!layer->wrapY && (tlY >= height || tlY + tileHeight * layerHeight < 0)))
+			if ((!settings.wrapX && (tlX >= width  || tlX + tileWidth  * layerWidth  < 0))
+			||  (!settings.wrapY && (tlY >= height || tlY + tileHeight * layerHeight < 0)))
 				continue;
 
 			int x1 = 0;
@@ -225,8 +267,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			int y2 = layerHeight;
 
 			// Additional tiles to render outside of the visible area
-			int borderX = 1 + (rdPtr->callback.use ? rdPtr->callback.borderX : 0);
-			int borderY = 1 + (rdPtr->callback.use ? rdPtr->callback.borderY : 0);
+			int borderX = 1 + (rdPtr->callback.useTile ? rdPtr->callback.borderX : 0);
+			int borderY = 1 + (rdPtr->callback.useTile ? rdPtr->callback.borderY : 0);
 
 			// Optimize drawing region
 			while (tlX <= -tileWidth*borderX)
@@ -239,7 +281,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 				y2--;
 
 			// Wrapping
-			if (layer->wrapX)
+			if (settings.wrapX)
 			{
 				while (tlX > -tileWidth*(borderX-1))
 				{
@@ -251,7 +293,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 					x2++;
 				}
 			}
-			if (layer->wrapY)
+			if (settings.wrapY)
 			{
 				while (tlY > -tileHeight*(borderY-1))
 				{
@@ -273,8 +315,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			{
 				// Cache for sub-layers - hard-coded limit of 10 right now, doubt someone will need more
 				SubLayer* subLayerCache[10] = {};
-				for (unsigned s = 0; s < 10 && s < layer->subLayers.size(); ++s)
-					subLayerCache[s] = &layer->subLayers[s];
+				for (unsigned s = 0; s < 10 && s < layer.subLayers.size(); ++s)
+					subLayerCache[s] = &layer.subLayers[s];
 
 				// Per-tile offset (for callbacks)
 				int offsetX = 0, offsetY = 0;
@@ -291,7 +333,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 						int tY = (y % layerHeight + layerHeight) % layerHeight;
 
 						// Get this tile's address
-						Tile tile = *layer->getTile(tX, tY);
+						Tile tile = *layer.getTile(tX, tY);
 
 						// Calculate position and render the tile, exit when impossible
 						do
@@ -299,15 +341,15 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							if (tile.id == Tile::EMPTY)
 								break;
 
-							unsigned char tilesetIndex = layer->tileset;
+							unsigned char tilesetIndex = settings.tileset;
 
 							// Determine tile opacity
-							BlitOp blitOp = layer->opacity < 0.999f ? BOP_BLEND : BOP_COPY;
-							float opacity = layer->opacity;
+							BlitOp blitOp = settings.opacity < 0.999f ? BOP_BLEND : BOP_COPY;
+							float opacity = settings.opacity;
 							LPARAM blitParam = 128 - int(opacity * 128);
 
 							// We use callbacks, so let the programmer do stuff
-							if (rdPtr->callback.use)
+							if (rdPtr->callback.useTile)
 							{
 								// We need to map the tile to rdPtr so we can modify its values before rendering
 								rdPtr->callback.tile = &tile;
@@ -333,7 +375,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								rdPtr->callback.y = y;
 
 								// Call condition so the programmer can modify the values
-								rdPtr->rRd->GenerateEvent(1);
+								generateEvent(1);
 
 								// Decided not to render tile...
 								if (!rdPtr->callback.visible)
@@ -456,8 +498,9 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	// Update window region
 	WinAddZone(rdPtr->rHo.hoAdRunHeader->rhIdEditWin, &rdPtr->rHo.hoRect);
 
-	// Clear pointer...
+	// Clear pointers...
 	rdPtr->callback.tile = 0;
+	rdPtr->callback.settings = 0;
 
 	return 0;
 }

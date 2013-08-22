@@ -25,6 +25,8 @@ using namespace std;
 
 #include	"ObjectSelection.h"
 
+#define generateEvent(e) callRunTimeFunction(rdPtr, RFUNCTION_GENERATEEVENT, (e), 0)
+
 #ifdef HWABETA
 #include <d3d9.h>
 #endif

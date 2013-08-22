@@ -5,10 +5,16 @@
 #ifdef CONDITION_MENU
 
 	SEPARATOR
-	ITEM(0, "Object is overlapping layer ?")
-	ITEM(2, "Pixel is solid ?")
-	SEPARATOR
-	ITEM(1,"On tile (before rendering)")
+	SUB_START("Collisions")
+		ITEM(0, "Object is overlapping layer ?")
+		ITEM(2, "Pixel is solid ?")
+	SUB_END
+	SUB_START("Before rendering")
+		ITEM(4, "On specific layer")
+		ITEM(3, "On any layer")
+		SEPARATOR
+		ITEM(1,"On tile")
+	SUB_END
 #endif
 
 // --------------------------------
@@ -26,15 +32,37 @@
 		SEPARATOR
 		ITEM(14, "Set layers to draw")
 	SUB_END
+	SUB_START("Animation")
+		ITEM(16, "Set timer")
+		ITEM(17, "Advance timer")
+	SUB_END
 	SUB_START("Collisions")
 		ITEM(13, "Set collision margin")
 	SUB_END
 	SEPARATOR
 	SUB_START("Callbacks")
-		ITEM(4, "Enable")
-		ITEM(5, "Disable")
-		SEPARATOR
-		ITEM(7, "Set tile render overflow")
+		SUB_START("Layer")
+			ITEM(18, "Enable")
+			ITEM(19, "Disable")
+		SUB_END
+		SUB_START("Tile")
+			ITEM(4, "Enable")
+			ITEM(5, "Disable")
+			SEPARATOR
+			ITEM(7, "Set tile render overflow")
+		SUB_END
+	SUB_END
+	SUB_START("On layer")
+		SUB_START("Settings")
+			ITEM(21, "Set tileset")
+			SEPARATOR
+			ITEM(23, "Set visible")
+			ITEM(20, "Set opacity")
+			SEPARATOR
+			ITEM(22, "Set offset")
+		SUB_END
+		SUB_START("Link sub-layer")
+		SUB_END
 	SUB_END
 	SUB_START("On tile")
 		ITEM(6, "Set tile")
@@ -63,14 +91,19 @@
 #ifdef EXPRESSION_MENU
 
 	SEPARATOR
+	ITEM(10, "Animation timer")
 	SUB_START("Callbacks")
-		ITEM(2, "X position")
-		ITEM(3, "Y position")
-		ITEM(4, "Tileset X")
-		ITEM(5, "Tileset Y")
+		SUB_START("On layer")
+			ITEM(11, "Layer index")
+		SUB_END
+		SUB_START("On tile")
+			ITEM(2, "X position")
+			ITEM(3, "Y position")
+			ITEM(4, "Tileset X")
+			ITEM(5, "Tileset Y")
+		SUB_END
 	SUB_END
-	SEPARATOR
-	SUB_START("Layer")
+	SUB_START("Coordinates")
 		SUB_START("Viewport render position")
 			ITEM(0, "X")
 			ITEM(1, "Y")

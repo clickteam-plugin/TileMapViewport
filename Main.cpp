@@ -42,8 +42,8 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	Tileset* tileset = rdPtr->cndTileset;
 	
 	// Store tile size (we'll need it often)
-	int tileWidth = layer->tileWidth;
-	int tileHeight = layer->tileHeight;
+	int tileWidth = layer->settings.tileWidth;
+	int tileHeight = layer->settings.tileHeight;
 
 	// Compute layer position on screen
 	int tlX = layer->getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
@@ -72,14 +72,14 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	objY -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
 
 	// Wrap the coordinates if necessary
-	if (layer->wrapX)
+	if (layer->settings.wrapX)
 	{
 		while (objX < 0)
 			objX += layerWidth;
 
 		objX %= layerWidth; 
 	}
-	if (layer->wrapY)
+	if (layer->settings.wrapY)
 	{
 		while (objY < 0)
 			objY += layerHeight;
@@ -201,7 +201,7 @@ CONDITION(
 
 
 	// Get layer's collision tileset
-	unsigned char tilesetID = (layer->collision != 0xff) ? layer->collision : layer->tileset;
+	unsigned char tilesetID = (layer->settings.collision != 0xff) ? layer->settings.collision : layer->settings.tileset;
 	if (tilesetID >= rdPtr->p->tilesets->size())
 		return false;
 
@@ -282,7 +282,7 @@ CONDITION(
 		return false;
 
 	// Get layer's collision tileset
-	unsigned char tilesetID = (layer->collision != 0xff) ? layer->collision : layer->tileset;
+	unsigned char tilesetID = (layer->settings.collision != 0xff) ? layer->settings.collision : layer->settings.tileset;
 	if (tilesetID >= rdPtr->p->tilesets->size())
 		return false;
 
@@ -290,8 +290,8 @@ CONDITION(
 	Tileset* tileset = &(*rdPtr->p->tilesets)[tilesetID];
 	
 	// Store tile size
-	int tileWidth = layer->tileWidth;
-	int tileHeight = layer->tileHeight;
+	int tileWidth = layer->settings.tileWidth;
+	int tileHeight = layer->settings.tileHeight;
 
 	// Compute layer position on screen
 	int tlX = layer->getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
@@ -363,6 +363,24 @@ CONDITION(
 	return surface->GetPixelFast(tilesetX, tilesetY) != surface->GetTransparentColor();
 }
 
+CONDITION(
+	/* ID */			3,
+	/* Name */			"%o: On layer",
+	/* Flags */			0,
+	/* Params */		(0)
+) {
+	return true;
+}
+
+CONDITION(
+	/* ID */			4,
+	/* Name */			"%o: On layer %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_COMPARAISON, "Layer index")
+) {
+	return rdPtr->callback.layerIndex;
+}
+
 // ============================================================================
 //
 // ACTIONS
@@ -415,24 +433,23 @@ ACTION(
 
 ACTION(
 	/* ID */			4,
-	/* Name */			"Enable render callbacks",
+	/* Name */			"Enable tile callbacks",
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	rdPtr->callback.use = true;
+	rdPtr->callback.useTile = true;
 	rdPtr->rc.rcChanged = true;
 }
 
 ACTION(
 	/* ID */			5,
-	/* Name */			"Disable render callbacks",
+	/* Name */			"Disable tile callbacks",
 	/* Flags */			0,
 	/* Params */		(0)
 ) {
-	rdPtr->callback.use = false;
+	rdPtr->callback.useTile = false;
 	rdPtr->rc.rcChanged = true;
 }
-
 
 ACTION(
 	/* ID */			6,
@@ -550,6 +567,96 @@ ACTION(
 	rdPtr->callback.tileset = (BYTE)intParam();
 }
 
+ACTION(
+	/* ID */			16,
+	/* Name */			"Set animation timer to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER, "Time in seconds (float)")
+) {
+	float time = fltParam();
+	rdPtr->animTime = time;
+}
+
+ACTION(	
+	/* ID */			17,
+	/* Name */			"Advance animation timer by %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER, "Time in seconds (float)")
+) {
+	float time = fltParam();
+	rdPtr->animTime += time;
+}
+
+ACTION(
+	/* ID */			18,
+	/* Name */			"Enable layer callbacks",
+	/* Flags */			0,
+	/* Params */		(0)
+) {
+	rdPtr->callback.useLayer = true;
+	rdPtr->rc.rcChanged = true;
+}
+
+ACTION(
+	/* ID */			19,
+	/* Name */			"Disable layer callbacks",
+	/* Flags */			0,
+	/* Params */		(0)
+) {
+	rdPtr->callback.useLayer = false;
+	rdPtr->rc.rcChanged = true;
+}
+
+ACTION(
+	/* ID */			20,
+	/* Name */			"Set layer opacity to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Opacity (0.0-1.0)")
+) {
+	if (rdPtr->callback.settings)
+	{
+		float o = fltParam();
+		rdPtr->callback.settings->opacity = max(0, min(1, o));
+	}
+}
+
+ACTION(
+	/* ID */			21,
+	/* Name */			"Set layer tileset to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Tileset index (0-255)")
+) {
+	if (rdPtr->callback.settings)
+	{
+		rdPtr->callback.settings->tileset = (unsigned char)intParam();
+	}
+}
+
+ACTION(
+	/* ID */			22,
+	/* Name */			"Set layer offset to (%0,%1)",
+	/* Flags */			0,
+	/* Params */		(2, PARAM_NUMBER,"Offset X (pixels)", PARAM_NUMBER,"Offset Y (pixels)")
+) {
+	if (rdPtr->callback.settings)
+	{	
+		rdPtr->callback.settings->offsetX = (short)intParam();
+		rdPtr->callback.settings->offsetY = (short)intParam();
+	}
+}
+
+ACTION(
+	/* ID */			23,
+	/* Name */			"Set layer visible to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Visible (0: No, 1: Yes)")
+) {
+	if (rdPtr->callback.settings)
+	{
+		rdPtr->callback.settings->visible = intParam() != 0;
+	}
+}
+
 // ============================================================================
 //
 // EXPRESSIONS
@@ -632,15 +739,15 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(2, EXPPARAM_NUMBER, "Layer index", EXPPARAM_NUMBER, "On-screen X")
 ) {
-	int layerIndex = ExParam(TYPE_INT);
+	unsigned layerIndex = ExParam(TYPE_INT);
 	int screen = ExParam(TYPE_INT);
 
 	if (layerIndex < rdPtr->p->layers->size())
 	{
 		Layer& layer = (*rdPtr->p->layers)[layerIndex];
 		screen -= rdPtr->rHo.hoX;
-		screen += (rdPtr->cameraX - layer.offsetX) * layer.scrollX;
-		screen /= layer.tileWidth;
+		screen += int((rdPtr->cameraX - layer.settings.offsetX) * layer.settings.scrollX);
+		screen /= layer.settings.tileWidth;
 
 		return screen;
 	}
@@ -654,15 +761,15 @@ EXPRESSION(
 	/* Flags */			0,
 	/* Params */		(2, EXPPARAM_NUMBER, "Layer index", EXPPARAM_NUMBER, "On-screen Y")
 ) {
-	int layerIndex = ExParam(TYPE_INT);
+	unsigned layerIndex = ExParam(TYPE_INT);
 	int screen = ExParam(TYPE_INT);
 
 	if (layerIndex < rdPtr->p->layers->size())
 	{
 		Layer& layer = (*rdPtr->p->layers)[layerIndex];
 		screen -= rdPtr->rHo.hoY;
-		screen += (rdPtr->cameraY - layer.offsetY) * layer.scrollY;
-		screen /= layer.tileHeight;
+		screen += int((rdPtr->cameraY - layer.settings.offsetY) * layer.settings.scrollY);
+		screen /= layer.settings.tileHeight;
 
 		return screen;
 	}
@@ -682,7 +789,7 @@ EXPRESSION(
 	if (i < rdPtr->p->layers->size())
 	{
 		Layer& layer = (*rdPtr->p->layers)[i];
-		return rdPtr->rHo.hoX + layer.getScreenX(rdPtr->cameraX) + layer.tileWidth * pos;
+		return rdPtr->rHo.hoX + layer.getScreenX(rdPtr->cameraX) + layer.settings.tileWidth * pos;
 	}
 	
 	return 0;
@@ -700,8 +807,26 @@ EXPRESSION(
 	if (i < rdPtr->p->layers->size())
 	{
 		Layer& layer = (*rdPtr->p->layers)[i];
-		return rdPtr->rHo.hoY + layer.getScreenY(rdPtr->cameraY) + layer.tileHeight * pos;
+		return rdPtr->rHo.hoY + layer.getScreenY(rdPtr->cameraY) + layer.settings.tileHeight * pos;
 	}
 	
 	return 0;
+}
+
+EXPRESSION(
+	/* ID */			10,
+	/* Name */			"AnimTimer(",
+	/* Flags */			EXPFLAG_DOUBLE,
+	/* Params */		(0)
+) {
+	ReturnFloat(rdPtr->animTime);
+}
+
+EXPRESSION(
+	/* ID */			11,
+	/* Name */			"CallbackLayerIndex(",
+	/* Flags */			0,
+	/* Params */		(0)
+) {
+	return rdPtr->callback.layerIndex;
 }
