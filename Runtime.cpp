@@ -76,12 +76,12 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	// Animation settings
 	rdPtr->lastTick = GetTickCount();
 	rdPtr->animMode = edPtr->animMode;
-	for (int i = 0; i < 256; ++i)
+	for (int i = 0; i < 255; ++i)
 	{
 		memset(&rdPtr->anim[i], 0, sizeof(Animation));
-		rdPtr->anim[i].speed = 16.0f;
-		rdPtr->anim[i].width = 4;
-		rdPtr->anim[i].height = 4;
+		rdPtr->anim[i].width = 1;
+		rdPtr->anim[i].height = 1;
+		rdPtr->anim[i].speed = 8.0f;
 	}
 	rdPtr->animTime = 0;
 
@@ -170,6 +170,21 @@ short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 // ----------------
 // Draw the object in the application screen.
 // 
+
+#define assignSubLayerSettingLink(name, minCellSize) \
+	assignSubLayerLink(layer.settings.subLayerLink, name, minCellSize)
+
+#define assignSubLayerCallbackLink(name, minCellSize) \
+	assignSubLayerLink(rdPtr->layerCallback.link, name, minCellSize)
+
+#define assignSubLayerLink(source, name, minCellSize) \
+	{ \
+		if (source.##name != 0xff \
+		&&	source.##name < layer.subLayers.size() \
+		&&	layer.subLayers[source.##name].getCellSize() >= minCellSize) \
+		{ sl_##name = &layer.subLayers[source.##name]; } \
+	} 1 // Dummy for ';'
+
 short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 {
 	// No attached parent
@@ -181,6 +196,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
 		rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
 	}
+
+	double time = rdPtr->animTime;
 
 	// On-screen coords
 	int vX = rdPtr->rHo.hoRect.left;
@@ -228,13 +245,33 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			// Store layer settings locally
 			LayerSettings settings = layer.settings;
 
+			// Sub-layer links (assigned via callback)
+			SubLayer* sl_tileset = 0, *sl_scaleX = 0, *sl_scaleY = 0, *sl_angle = 0, *sl_animation = 0;
+
+			// If necessary, load the sub-layers for per-tile render info
+			assignSubLayerSettingLink(tileset, 1);
+			assignSubLayerSettingLink(animation, 1);
+
+			// Perform layer callback and update sub-layer links if necessary...
 			if (rdPtr->layerCallback.use)
 			{
 				rdPtr->layerCallback.index = i;
 				rdPtr->layerCallback.settings = &settings;
 
+				// Reset layer links
+				memset(&rdPtr->layerCallback.link, 0xff, sizeof(rdPtr->layerCallback.link));
+
+				// Perform callback
 				generateEvent(3);
 				generateEvent(4);
+
+				// Assign linked sub-layer pointers
+				assignSubLayerCallbackLink(tileset, 1);
+				assignSubLayerCallbackLink(animation, 1);
+				assignSubLayerCallbackLink(scaleX, 4);
+				assignSubLayerCallbackLink(scaleY, 4);
+				assignSubLayerCallbackLink(angle, 4);
+
 			}
 
 			// No data to draw or simply invisible
@@ -314,14 +351,14 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			// If can render
 			if (x2-x1 > 0 && y2-y1 > 0)
 			{
-				// Cache for sub-layers - hard-coded limit of 10 right now, doubt someone will need more
-				SubLayer* subLayerCache[10] = {};
-				for (unsigned s = 0; s < 10 && s < layer.subLayers.size(); ++s)
-					subLayerCache[s] = &layer.subLayers[s];
-
-
 				// Initialize default render settings of tile
-				TileSettings tileSettings;
+				TileSettings origTileSettings;
+
+				if (sl_scaleX || sl_scaleY || sl_angle)
+					origTileSettings.transform = true;
+
+				// Settings storage that can be modified in a tile callback
+				TileSettings tileSettings = origTileSettings;
 
 				// Per-tile offset (for callbacks)
 				int offsetX = 0, offsetY = 0;
@@ -346,7 +383,23 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							if (tile.id == Tile::EMPTY)
 								break;
 
+							// By default, use the layer tileset
 							unsigned char tilesetIndex = settings.tileset;
+
+							// Default animation
+							unsigned char animation = 0;
+
+							// Sub-layer links
+							if (sl_tileset)
+								tilesetIndex = *sl_tileset->getCell(x, y);
+							if (sl_animation)
+								sl_animation->getCellSafe(x, y, &animation);
+							if (sl_scaleX)
+								sl_scaleX->getCellSafe(x, y, &tileSettings.scaleX);
+							if (sl_scaleY)
+								sl_scaleY->getCellSafe(x, y, &tileSettings.scaleY);
+							if (sl_angle)
+								sl_angle->getCellSafe(x, y, &tileSettings.angle);
 
 							// Determine tile opacity
 							BlitOp blitOp = settings.opacity < 0.999f ? BOP_BLEND : BOP_COPY;
@@ -357,7 +410,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							if (rdPtr->tileCallback.use)
 							{
 								// Reset the tile settings - the last callback might have changed them
-								tileSettings = TileSettings();
+								tileSettings = origTileSettings;
 
 								rdPtr->tileCallback.settings = &tileSettings;
 								tileSettings.tileset = tilesetIndex;
@@ -401,10 +454,51 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								}
 							}
 
+							// Animate if there is more than 1 tile in the selected animation
+							Animation& a = rdPtr->anim[animation];
+							const int tileCount = a.width * a.height;
+							if (tileCount > 1)
+							{
+								int tileIndex = int(time * a.speed);
+								while (tileIndex < 0)
+									tileIndex += tileCount;
+
+								// _ - ^ _ - ^ ...
+								if(a.mode == AM_LOOP)
+									tileIndex %= tileCount;
+
+								// _ - ^ - _ - ...
+								else if (a.mode == AM_PINGPONG)
+								{
+									tileIndex %= 2 * tileCount - 2;
+									if (tileIndex >= tileCount)
+										tileIndex = 2 * tileCount - tileIndex - 2;
+								}
+								// _ - ^ ^ ^ ...
+								else if (a.mode == AM_ONCE)
+								{
+									tileIndex = min(tileCount - 1, tileIndex);
+								}
+
+								// Y first, then X
+								if (a.columnMajor)
+								{
+									tile.x += tileIndex / a.height;
+									tile.y += tileIndex % a.height;
+								}
+								// X first, then Y
+								else
+								{
+									tile.x += tileIndex % a.width;
+									tile.y += tileIndex / a.width;
+								}
+							}
+
+							// Get the computed tileset's surface
 							cSurface* tileSurf = tilesetCache[tilesetIndex];
 
 							if (!tileSurf)
-								continue;
+								break;
 
 #ifdef HWABETA
 							// HWA only: tile angle and scale on callback. Disables accurate clipping!
@@ -412,12 +506,12 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							{
 								float scaleX = tileSettings.scaleX;
 								float scaleY = tileSettings.scaleY;
-								float angle = tileSettings.angle;
+								float angle = tileSettings.angle * 360.0f;
 
 								POINT center = {tileWidth/2, tileHeight/2};
 								tileSurf->BlitEx(*target, screenX+offsetX+center.x, screenY+offsetY+center.y, scaleX, scaleY, tile.x*tileWidth, tile.y*tileHeight, tileWidth, tileHeight,
 									&center, angle, BMODE_TRANSP, blitOp, blitParam);
-								continue;
+								break;
 							}
 #endif
 							

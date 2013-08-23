@@ -486,7 +486,7 @@ ACTION(
 	/* ID */			8,
 	/* Name */			"Set tile angle to %0",
 	/* Flags */			0,
-	/* Params */		(1, PARAM_NUMBER,"Angle (0-360)")
+	/* Params */		(1, PARAM_NUMBER,"Angle (0-1)")
 ) {
 #ifdef HWABETA
 	if (rdPtr->tileCallback.settings)
@@ -671,6 +671,116 @@ ACTION(
 		rdPtr->layerCallback.settings->visible = intParam() != 0;
 	}
 }
+
+ACTION(
+	/* ID */			24,
+	/* Name */			"Set layer tileset link to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Sub-layer index")
+) {
+	rdPtr->layerCallback.link.tileset = (unsigned char)intParam();
+}
+
+ACTION(
+	/* ID */			25,
+	/* Name */			"Set layer X scale link to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Sub-layer index")
+) {
+	rdPtr->layerCallback.link.scaleX = (unsigned char)intParam();
+}
+
+ACTION(
+	/* ID */			26,
+	/* Name */			"Set layer Y scale link to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Sub-layer index")
+) {
+	rdPtr->layerCallback.link.scaleY = (unsigned char)intParam();
+}
+
+ACTION(
+	/* ID */			27,
+	/* Name */			"Set layer angle link to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Sub-layer index")
+) {
+	rdPtr->layerCallback.link.angle = (unsigned char)intParam();
+}
+
+ACTION(
+	/* ID */			28,
+	/* Name */			"Set layer animation link to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Sub-layer index")
+) {
+	rdPtr->layerCallback.link.animation = (unsigned char)intParam();
+}
+
+ACTION(
+	/* ID */			29,
+	/* Name */			"Set animation %0 speed to %1",
+	/* Flags */			0,
+	/* Params */		(2, PARAM_NUMBER,"Animation index (0-255, 0: Default)",PARAM_NUMBER,"Speed in frames per second")
+) {
+	unsigned char i = (unsigned char)intParam();
+	rdPtr->anim[i].speed = fltParam();
+}
+
+ACTION(
+	/* ID */			30,
+	/* Name */			"Set animation %0 width to %1",
+	/* Flags */			0,
+	/* Params */		(2, PARAM_NUMBER,"Animation index (0-255, 0: Default)",PARAM_NUMBER,"Number of tiles to use horizontally")
+) {
+	unsigned char i = (unsigned char)intParam();
+	int value = intParam();
+	rdPtr->anim[i].width = max(1, value);
+}
+
+ACTION(
+	/* ID */			31,
+	/* Name */			"Set animation %0 height to %1",
+	/* Flags */			0,
+	/* Params */		(2, PARAM_NUMBER,"Animation index (0-255, 0: Default)",PARAM_NUMBER,"Number of tiles to use vertically")
+) {
+	unsigned char i = (unsigned char)intParam();
+	int value = intParam();
+	rdPtr->anim[i].height = max(1, value);
+}
+
+ACTION(
+	/* ID */			32,
+	/* Name */			"Set animation %0 mode to %1",
+	/* Flags */			0,
+	/* Params */		(2, PARAM_NUMBER,"Animation index (0-255, 0: Default)",PARAM_NUMBER,"Mode (0: Loop, 1: Ping-Pong, 2: Once)")
+) {
+	unsigned char i = (unsigned char)intParam();
+	int value = intParam();
+	rdPtr->anim[i].mode = (ANIMMODE)value;
+}
+
+ACTION(
+	/* ID */			33,
+	/* Name */			"Set animation %0 order to %1",
+	/* Flags */			0,
+	/* Params */		(2, PARAM_NUMBER,"Animation index (0-255, 0: Default)",PARAM_NUMBER,"Order (0: Row-major (Columns first), 1: Column-major (Rows first)")
+) {
+	unsigned char i = (unsigned char)intParam();
+	int value = intParam();
+	rdPtr->anim[i].columnMajor = value != 0;
+}
+
+ACTION(
+	/* ID */			34,
+	/* Name */			"Set tile animation index to %0",
+	/* Flags */			0,
+	/* Params */		(1, PARAM_NUMBER,"Animation index (0-255, 0: Default)")
+) {
+	if (rdPtr->tileCallback.settings)
+		rdPtr->tileCallback.settings->animation = (unsigned char)intParam();
+}
+
 
 // ============================================================================
 //

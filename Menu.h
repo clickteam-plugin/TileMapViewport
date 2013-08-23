@@ -35,6 +35,12 @@
 	SUB_START("Animation")
 		ITEM(16, "Set timer")
 		ITEM(17, "Advance timer")
+		SEPARATOR
+		ITEM(29, "Set speed")
+		ITEM(30, "Set width")
+		ITEM(31, "Set height")
+		ITEM(32, "Set mode")
+		ITEM(33, "Set order")
 	SUB_END
 	SUB_START("Collisions")
 		ITEM(13, "Set collision margin")
@@ -60,12 +66,23 @@
 			ITEM(20, "Set opacity")
 			SEPARATOR
 			ITEM(22, "Set offset")
-		SUB_END
-		SUB_START("Link sub-layer")
+			SEPARATOR
+			SUB_START("Sub-layer links")
+				ITEM(28, "Set animation")
+				SEPARATOR
+				ITEM(24, "To tileset")
+				SEPARATOR
+				SUB_START("HWA only")
+					ITEM(27, "Set angle")
+					ITEM(25, "Set X scale")
+					ITEM(26, "Set Y scale")
+				SUB_END
+			SUB_END
 		SUB_END
 	SUB_END
 	SUB_START("On tile")
-		ITEM(6, "Set tile")
+		ITEM(32, "Set animation")
+		SEPARATOR
 		ITEM(15, "Set tileset")
 		SEPARATOR
 		ITEM(3, "Set offset")
