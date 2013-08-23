@@ -127,7 +127,7 @@
 		SUB_END
 		SUB_START("On-screen to layer position")
 			ITEM(6, "X")
-			ITEM(7," Y")
+			ITEM(7, "Y")
 		SUB_END
 		SUB_START("Layer to on-screen position")
 			ITEM(8, "X")

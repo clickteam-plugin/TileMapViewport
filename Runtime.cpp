@@ -187,24 +187,6 @@ short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 
 short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 {
-	// No attached parent
-	if (!rdPtr->p)
-		return 0;
-
-	if (rdPtr->autoScroll)
-	{
-		rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
-		rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
-	}
-
-	double time = rdPtr->animTime;
-
-	// On-screen coords
-	int vX = rdPtr->rHo.hoRect.left;
-	int vY = rdPtr->rHo.hoRect.top;
-	int width = rdPtr->rHo.hoImgWidth;
-	int height = rdPtr->rHo.hoImgHeight;
-
 	// Whether or not we use a temporary surface (-> coordinate shifting)
 	bool tempSurf = rdPtr->surface != 0;
 
@@ -216,10 +198,34 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	cSurface* target = tempSurf ? rdPtr->surface : ps;
 	if (!target)
 		return 0;
+	
+	// On-screen coords
+	int vX = rdPtr->rHo.hoRect.left;
+	int vY = rdPtr->rHo.hoRect.top;
+	int width = rdPtr->rHo.hoImgWidth;
+	int height = rdPtr->rHo.hoImgHeight;
 
 	// Clear background
-	if (!rdPtr->transparent && tempSurf)
-		target->Fill(rdPtr->background);
+	if (!rdPtr->transparent)
+	{
+		if (tempSurf)
+			target->Fill(rdPtr->background);
+		else
+			target->Fill(vX, vY, width, height, rdPtr->background);
+	}
+
+	// No attached parent... nothing to draw...
+	if (!rdPtr->p)
+		return 0;
+
+	if (rdPtr->autoScroll)
+	{
+		rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
+		rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
+	}
+
+	double time = rdPtr->animTime;
+
 
 	// For all wanted layers...
 	unsigned layerCount = rdPtr->p->layers->size();

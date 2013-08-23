@@ -764,7 +764,7 @@ ACTION(
 	/* ID */			33,
 	/* Name */			"Set animation %0 order to %1",
 	/* Flags */			0,
-	/* Params */		(2, PARAM_NUMBER,"Animation index (0-255, 0: Default)",PARAM_NUMBER,"Order (0: Row-major (Columns first), 1: Column-major (Rows first)")
+	/* Params */		(2, PARAM_NUMBER,"Animation index (0-255, 0: Default)",PARAM_NUMBER,"Order (0: Row-major (Rows first), 1: Column-major (Columns first)")
 ) {
 	unsigned char i = (unsigned char)intParam();
 	int value = intParam();
