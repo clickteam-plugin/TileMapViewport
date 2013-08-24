@@ -397,15 +397,15 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
 							// Sub-layer links
 							if (sl_tileset)
-								tilesetIndex = *sl_tileset->getCell(x, y);
+								tilesetIndex = *sl_tileset->getCell(tX, tY);
 							if (sl_animation)
-								sl_animation->getCellSafe(x, y, &animation);
+								sl_animation->getCellSafe(tX, tY, &animation);
 							if (sl_scaleX)
-								sl_scaleX->getCellSafe(x, y, &tileSettings.scaleX);
+								sl_scaleX->getCellSafe(tX, tY, &tileSettings.scaleX);
 							if (sl_scaleY)
-								sl_scaleY->getCellSafe(x, y, &tileSettings.scaleY);
+								sl_scaleY->getCellSafe(tX, tY, &tileSettings.scaleY);
 							if (sl_angle)
-								sl_angle->getCellSafe(x, y, &tileSettings.angle);
+								sl_angle->getCellSafe(tX, tY, &tileSettings.angle);
 
 							// Determine tile opacity
 							BlitOp blitOp = settings.opacity < 0.999f ? BOP_BLEND : BOP_COPY;
