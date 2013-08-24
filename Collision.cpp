@@ -77,8 +77,11 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 	// Until there are no more rectangles to check...
 	while (rectCount--)
 	{
-		Rect subRect = rectStack[rectCount];
+		// This should NEVER EVER happen, so if it really does, make the user report this issue immediately.
+		if (rectCount >= 5)
+			MessageBox(0, "Tile Map has a problem. Please post this in the forum thread.", "Rectangle stack overflow!", 0);
 
+		Rect subRect = rectStack[rectCount];
 
 		// Wrap the tiles if necessary
 		unsigned split = 0xffffffff;
@@ -96,9 +99,9 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 				split2 = subRect;
 				split2.x1 = split1.x2 + 1;
 
-				// Unwrap split coordinates (should be fail-safe, maybe even unnecessary. Re-investigate!)
-				signmodPair(split1.x1, split1.x2, 0, layerPxWidth);
-				signmodPair(split2.x1, split2.x2, 0, layerPxWidth);
+				// Fail-safe: Modulo again. From what I know, this is unnecessary.
+				//signmodPair(split1.x1, split1.x2, 0, layerPxWidth);
+				//signmodPair(split2.x1, split2.x2, 0, layerPxWidth);
 			}
 		}
 		if (layer.settings.wrapY)
@@ -114,10 +117,6 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 				Rect& split2 = rectStack[rectCount++];
 				split2 = subRect;
 				split2.y1 = split1.y2 + 1;
-
-				// Unwrap split coordinates (should be fail-safe, maybe even unnecessary. Re-investigate!)
-				signmodPair(split1.y1, split1.y2, 0, layerPxHeight);
-				signmodPair(split2.y1, split2.y2, 0, layerPxHeight);
 			}
 		}
 
