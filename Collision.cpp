@@ -61,7 +61,7 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 	}
 
 	// Make object coordinates relative to layer's origin
-	rect.moveBy(-rdPtr->cameraX-layerX, -rdPtr->cameraY-layerY);
+	rect.moveBy(-(layerX + rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX), -(layerY + rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY));
 
 	// Get the tiles that the object overlaps
 
@@ -184,9 +184,6 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 					else
 					{
 						COLORREF transpCol = surface->GetTransparentColor();
-
-						if (tilesetX == 240)
-							printf("%d,%d,%d,%d\n", intersect.x1, intersect.y1, intersect.x2, intersect.y2);
 
 						for (int iX = intersect.x1; iX < intersect.x2; ++iX)
 							for (int iY = intersect.y1; iY < intersect.y2; ++iY)
