@@ -26,11 +26,23 @@ inline int signmod(int x, int room)
 }
 
 // Wraps a pair of two numbers representing a low and a high boundary whose difference must be retained
-inline bool signmodPair(int& a, int&b, int room)
+// Returns true if there was no split. Otherwise, split contains the offset from a where the split must be performed
+inline int signmodPair(int& a, int&b, /*unsigned& split,*/ int room)
 {
-	// [a,b] is on the edge of the room, there's nothing we can do
-	if ((a < 0 && b >= 0) || (a < room && b >= room))
+	unsigned split; //TODO REMOVE
+
+	// [a,b] is on the edge of the room, we have to split the interval in two
+	if (a < 0 && b >= 0)
+	{
+		split = -a;
 		return false;
+	}
+
+	if (a < room && b >= room)
+	{
+		split = room - a;
+		return false;
+	}
 
 	while (a < 0)
 	{
@@ -82,17 +94,17 @@ bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj)
 	objX1 -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
 	objY1 -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
 
+	int objX2 = objX1 + obj->hoImgWidth;
+	int objY2 = objY1 + obj->hoImgHeight;
+
 	// If we want to collide outside of the viewport, we have to make sure the object coords stay in the layer region
 	if (rdPtr->outsideColl)
 	{
 		if (layer.settings.wrapX)
-			objX1 = signmod(objX1, layerWidth*tileWidth);
+			signmodPair(objX1, objX2, layerWidth*tileWidth);
 		if (layer.settings.wrapY)
-			objY1 = signmod(objY1, layerHeight*tileHeight);
+			signmodPair(objY1, objY2, layerHeight*tileHeight);
 	}
-
-	int objX2 = objX1 + obj->hoImgWidth;
-	int objY2 = objY1 + obj->hoImgHeight;
 
 	// Get the tiles that the object overlaps
 	int x1 = floordiv(objX1 - tlX, tileWidth);
@@ -134,8 +146,6 @@ bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj)
 	{
 		if (!signmodPair(objX1, objX2, layerWidth*tileWidth))
 			printf("Horizontal wrap edge detected! TODO!\n");
-		objX1 = signmod(objX1, layerWidth*tileWidth);
-		objX2 = signmod(objX2, layerWidth*tileWidth);
 	}
 	if (layer.settings.wrapY)
 	{
