@@ -67,7 +67,7 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 
 	// Stack of the tile regions that have to be examined
 	// Whenever an object is on the edge
-	// The rectangle stack stores the pixel rectangle's subrect for the according region
+	// The rectangle stack stores the pixel rectangle's rect for the according region
 	Rect rectStack[5];
 	unsigned rectCount = 1;
 
@@ -81,22 +81,23 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 		if (rectCount >= 5)
 			MessageBox(0, "Tile Map has a problem. Please post this in the forum thread.", "Rectangle stack overflow!", 0);
 
-		Rect subRect = rectStack[rectCount];
+		// Get the most important rectangle
+		rect = rectStack[rectCount];
 
 		// Wrap the tiles if necessary
-		unsigned split = 0xffffffff;
+		unsigned splitOffset = 0;
 		if (layer.settings.wrapX)
 		{
-			if (!signmodPair(subRect.x1, subRect.x2, &split, layerPxWidth))
+			if (!signmodPair(rect.x1, rect.x2, &splitOffset, layerPxWidth))
 			{
 				// Create left half
 				Rect& split1 = rectStack[rectCount++];
-				split1 = subRect;
-				split1.x2 = split1.x1 + split - 1;
+				split1 = rect;
+				split1.x2 = split1.x1 + splitOffset - 1;
 
 				// Create right half
 				Rect& split2 = rectStack[rectCount++];
-				split2 = subRect;
+				split2 = rect;
 				split2.x1 = split1.x2 + 1;
 
 				// Fail-safe: Modulo again. From what I know, this is unnecessary.
@@ -106,29 +107,29 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 		}
 		if (layer.settings.wrapY)
 		{
-			if (!signmodPair(subRect.y1, subRect.y2, &split, layerPxHeight))
+			if (!signmodPair(rect.y1, rect.y2, &splitOffset, layerPxHeight))
 			{
 				// Create left half
 				Rect& split1 = rectStack[rectCount++];
-				split1 = subRect;
-				split1.y2 = split1.y1 + split - 1;
+				split1 = rect;
+				split1.y2 = split1.y1 + splitOffset - 1;
 
 				// Create right half
 				Rect& split2 = rectStack[rectCount++];
-				split2 = subRect;
+				split2 = rect;
 				split2.y1 = split1.y2 + 1;
 			}
 		}
 
 		// Split occured -> new regions to check added. This one can now be ignored
-		if (split != 0xffffffff)
+		if (splitOffset)
 			continue;
 
 		// Calculate the tiles that this rectangle overlaps
-		int x1 = floordiv(subRect.x1, tileWidth);
-		int y1 = floordiv(subRect.y1, tileHeight);
-		int x2 = floordiv(subRect.x2 - 1, tileWidth);
-		int y2 = floordiv(subRect.y2 - 1, tileHeight);
+		int x1 = floordiv(rect.x1, tileWidth);
+		int y1 = floordiv(rect.y1, tileHeight);
+		int x2 = floordiv(rect.x2 - 1, tileWidth);
+		int y2 = floordiv(rect.y2 - 1, tileHeight);
 
 		// Limit candidates to possibly existing tiles
 		x1 = max(0, min(x1, layerWidth - 1));
@@ -161,10 +162,10 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 
 					// Get intersection box (relative to tile)
 					Rect intersect;
-					intersect.x1 = max(subRect.x1, tileBounds.x1) - tileBounds.x1 + tilesetX;
-					intersect.y1 = max(subRect.y1, tileBounds.y1) - tileBounds.y1 + tilesetY;
-					intersect.x2 = min(subRect.x2, tileBounds.x2) - tileBounds.x1 + tilesetX;
-					intersect.y2 = min(subRect.y2, tileBounds.y2) - tileBounds.y1 + tilesetY;
+					intersect.x1 = max(rect.x1, tileBounds.x1) - tileBounds.x1 + tilesetX;
+					intersect.y1 = max(rect.y1, tileBounds.y1) - tileBounds.y1 + tilesetY;
+					intersect.x2 = min(rect.x2, tileBounds.x2) - tileBounds.x1 + tilesetX;
+					intersect.y2 = min(rect.y2, tileBounds.y2) - tileBounds.y1 + tilesetY;
 
 					cSurface* surface = tileset.surface;
 					bool alpha = surface->HasAlpha() != 0;
