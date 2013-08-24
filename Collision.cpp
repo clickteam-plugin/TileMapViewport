@@ -27,61 +27,67 @@ inline int signmod(int x, int room)
 
 // Wraps a pair of two numbers representing a low and a high boundary whose difference must be retained
 // Returns true if there was no split. Otherwise, split contains the offset from a where the split must be performed
-inline int signmodPair(int& a, int&b, /*unsigned& split,*/ int room)
+inline int signmodPair(int& a, int&b, unsigned& split, int room)
 {
-	unsigned split; //TODO REMOVE
-
-	// [a,b] is on the edge of the room, we have to split the interval in two
-	if (a < 0 && b >= 0)
-	{
-		split = -a;
-		return false;
-	}
-
-	if (a < room && b >= room)
-	{
-		split = room - a;
-		return false;
-	}
-
-	while (a < 0)
-	{
-		a += room;
-		b += room;
-	}
-
+	// Wrapping right/bottom
 	if (a >= room)
 	{
 		int old = a;
 		a %= room;
 		b = b - old + a;
 	}
-	
+
+	// Wrapping left/top
+	while (a < 0)
+	{
+		a += room;
+		b += room;
+	}
+
+	// Crossing the line... need to split
+	if (b >= room)
+	{	
+		split = room - a;
+		return false;
+	}
+
 	return true;
 }
 
-// Returns true if the given object collides with the given layer using the given tileset (for pixel-testing)
+// Like checkObjectOverlapRegion, but with the whole layer as region...
 bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj)
+{
+	RECT region;
+	region.left = 0;
+	region.top = 0;
+	region.right = layer.getWidth() - 1;
+	region.bottom = layer.getHeight() - 1;
+	return checkObjectOverlapRegion(rdPtr, layer, tileset, region, obj);
+}
+
+// Returns true if the given object collides with the given layer region using the given tileset (for pixel-testing)
+// regionFlag is for stack overflow prevention: 1 bit set = X split already performed, 2 bit set = Y split already performed
+bool checkObjectOverlapRegion(LPRDATA rdPtr, Layer& layer, Tileset& tileset, const RECT& region, LPHO obj, int regionFlag, int regionObjPos)
 {
 	if (!rdPtr->p)
 		return false;
-	
-	// Store some frequently used values
+
+	// Store some frequenlayerY used values
 	int tileWidth = layer.settings.tileWidth;
 	int tileHeight = layer.settings.tileHeight;
 	int layerWidth = layer.getWidth();
 	int layerHeight = layer.getHeight();
 
 	// Compute layer position on screen
-	int tlX = layer.getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
-	int tlY = layer.getScreenY(rdPtr->cameraY) + rdPtr->rHo.hoRect.top;
+	int layerX = layer.getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
+	int layerY = layer.getScreenY(rdPtr->cameraY) + rdPtr->rHo.hoRect.top;
 
 	// Get object coordinates
 	int objX1 = obj->hoX - obj->hoImgXSpot;
 	int objY1 = obj->hoY - obj->hoImgYSpot;
 
 	// Not overlapping visible part, exit
-	if (!rdPtr->outsideColl)
+	if (!regionFlag && !rdPtr->outsideColl)
 	{
 		if (objX1 + obj->hoImgWidth < rdPtr->rHo.hoX - rdPtr->collMargin.left
 		||	objY1 + obj->hoImgHeight < rdPtr->rHo.hoY - rdPtr->collMargin.top
@@ -97,65 +103,80 @@ bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj)
 	int objX2 = objX1 + obj->hoImgWidth;
 	int objY2 = objY1 + obj->hoImgHeight;
 
-	// If we want to collide outside of the viewport, we have to make sure the object coords stay in the layer region
-	if (rdPtr->outsideColl)
-	{
-		if (layer.settings.wrapX)
-			signmodPair(objX1, objX2, layerWidth*tileWidth);
-		if (layer.settings.wrapY)
-			signmodPair(objY1, objY2, layerHeight*tileHeight);
-	}
+	// Make object coordinates relative to layer's origin
+	objX1 -= layerX;
+	objY1 -= layerY;
+	objX2 -= layerX;
+	objY2 -= layerY;
 
 	// Get the tiles that the object overlaps
-	int x1 = floordiv(objX1 - tlX, tileWidth);
-	int y1 = floordiv(objY1 - tlY, tileHeight);
-	int x2 = floordiv(objX2 - tlX - 1, tileWidth);
-	int y2 = floordiv(objY2 - tlY - 1, tileHeight);
+	int x1 = floordiv(objX1, tileWidth);
+	int y1 = floordiv(objY1, tileHeight);
+	int x2 = floordiv(objX2 - 1, tileWidth);
+	int y2 = floordiv(objY2 - 1, tileHeight);
 
-	// Wrap the coordinates if necessary
-	if (layer.settings.wrapX)
+	// To calculate the wrapped object coordinate
+	int oldX1 = x1, oldY1 = y1;
+
+
+	// Wrap the tiles if necessary
+	if (layer.settings.wrapX && (regionFlag & 1) == 0)
 	{
-		if (!signmodPair(x1, x2, layerWidth))
-			printf("Horizontal wrap edge detected! TODO!\n");
+		unsigned split;
+		if (!signmodPair(x1, x2, split, layerWidth))
+		{
+			RECT region = {x1, y1, x2, y2};
+
+			// Create left half
+			RECT lSplit = region;
+			lSplit.right = region.left + split - 1;
+
+			// Create right half
+			RECT rSplit = region;
+			rSplit.left = lSplit.right + 1;
+			rSplit.left %= layerWidth;
+			rSplit.right %= layerWidth;
+
+			printf("T %d, %d, %d, %d\n", region.left, region.top, region.right, region.bottom);
+			printf("L %d, %d, %d, %d\n", lSplit.left, lSplit.top, lSplit.right, lSplit.bottom);
+			printf("R %d, %d, %d, %d\n", rSplit.left, rSplit.top, rSplit.right, rSplit.bottom);
+
+			return checkObjectOverlapRegion(rdPtr, layer, tileset, lSplit, obj, regionFlag | 1, objX1 - (oldX1 - x1) * tileWidth)
+				|| checkObjectOverlapRegion(rdPtr, layer, tileset, rSplit, obj, regionFlag | 1, objX1 - (oldX1 - x1) * tileWidth);
+		}
 	}
-	if (layer.settings.wrapY)
+	if (layer.settings.wrapY && (regionFlag & 2) == 0)
 	{
-		if (!signmodPair(y1, y2, layerHeight))
-			printf("Vertical wrap edge detected! TODO!\n");
+		unsigned split;
+		if (!signmodPair(y1, y2, split, layerHeight))
+			printf("TY split %d ... ", split);
 	}
 
-	// TODO, I guess: Collisions on the edge of a layer wrap are not properly implemented
 
-	// Nothing to do if the object is not within the tile area
-	if (x1 >= layerWidth || y1 >= layerHeight || x2 < 0 || y2 < 0)
-		return false;
+
+	// Unwrap  object coordinates (according to wrapped tiles)
+	if (regionFlag & 1)
+	{
+		objX1 = regionObjPos;
+		objX2 = regionObjPos + obj->hoImgWidth;
+	}
+	else
+	{
+		objX1 -= (oldX1 - x1) * tileWidth;
+		objX2 -= (oldX1 - x1) * tileWidth;
+	}
+	objY1 -= (oldY1 - y1) * tileHeight;
+	objY2 -= (oldY1 - y1) * tileHeight;
+
 
 	// Limit candidates to possibly overlapping tiles
-	x1 = max(0, x1);
-	x2 = min(layerWidth-1, x2);
-	y1 = max(0, y1);
-	y2 = min(layerHeight-1, y2);
-
-	// Make object coordinates relative to layer's origin
-	objX1 -= tlX;
-	objY1 -= tlY;
-	objX2 -= tlX;
-	objY2 -= tlY;
-
-	if (layer.settings.wrapX)
-	{
-		if (!signmodPair(objX1, objX2, layerWidth*tileWidth))
-			printf("Horizontal wrap edge detected! TODO!\n");
-	}
-	if (layer.settings.wrapY)
-	{
-		if (!signmodPair(objY1, objY2, layerHeight*tileHeight))
-			printf("Vertical wrap edge detected! TODO!\n");
-	}
-
-	bool fineColl = rdPtr->fineColl;
+	x1 = max(region.left, min(region.right, x1));
+	x2 = max(region.left, min(region.right, x2));
+	y1 = max(region.top, min(region.bottom, y1));
+	y2 = max(region.top, min(region.bottom, y2));
 
 	// Check for any overlapping tile
+	bool fineColl = rdPtr->fineColl;
 	for (int x = x1; x <= x2; ++x)
 	{
 		for (int y = y1; y <= y2; ++y)
@@ -221,8 +242,8 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 	int tileHeight = layer.settings.tileHeight;
 
 	// Compute layer position on screen
-	int tlX = layer.getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
-	int tlY = layer.getScreenY(rdPtr->cameraY) + rdPtr->rHo.hoRect.top;
+	int layerX = layer.getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
+	int layerY = layer.getScreenY(rdPtr->cameraY) + rdPtr->rHo.hoRect.top;
 
 	// Get layer size in px
 	int layerWidth = layer.getWidth() * tileWidth;
@@ -243,8 +264,8 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 	pixelY -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
 
 	// Get the tile that the object overlaps
-	int tilePosX = floordiv(pixelX - tlX, tileWidth);
-	int tilePosY = floordiv(pixelY - tlY, tileHeight);
+	int tilePosX = floordiv(pixelX - layerX, tileWidth);
+	int tilePosY = floordiv(pixelY - layerY, tileHeight);
 
 	// Ensure that the tiles are in the layer
 	int width = layer.getWidth();
@@ -255,8 +276,8 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 		return false;
 
 	// Make object coordinates relative to layer's origin
-	pixelX -= tlX;
-	pixelY -= tlY;
+	pixelX -= layerX;
+	pixelY -= layerY;
 
 	// Check overlapping tile
 	Tile* tile = layer.getTile(tilePosX, tilePosY);
@@ -289,3 +310,13 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 
 	return surface->GetPixelFast(tilesetX, tilesetY) != surface->GetTransparentColor();
 }
+
+
+// UNUSED code that will probably never be reused!
+//if (rdPtr->outsideColl)
+//{
+//	if (layer.settings.wrapX)
+//		signmodPair(objX1, objX2, split, layerWidth*tileWidth);
+//	if (layer.settings.wrapY)
+//		signmodPair(objY1, objY2, split, layerHeight*tileHeight);
+//}

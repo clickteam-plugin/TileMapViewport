@@ -27,6 +27,7 @@ using namespace std;
 
 #define generateEvent(e) callRunTimeFunction(rdPtr, RFUNCTION_GENERATEEVENT, (e), 0)
 bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj);
+bool checkObjectOverlapRegion(LPRDATA rdPtr, Layer& layer, Tileset& tileset, const RECT& region, LPHO obj, int regionFlag = 0, int regionObjPos = 0);
 bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, int pixelY);
 
 
