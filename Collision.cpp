@@ -25,6 +25,29 @@ inline int signmod(int x, int room)
 	return x %= room;
 }
 
+// Wraps a pair of two numbers representing a low and a high boundary whose difference must be retained
+inline bool signmodPair(int& a, int&b, int room)
+{
+	// [a,b] is on the edge of the room, there's nothing we can do
+	if ((a < 0 && b >= 0) || (a < room && b >= room))
+		return false;
+
+	while (a < 0)
+	{
+		a += room;
+		b += room;
+	}
+
+	if (a >= room)
+	{
+		int old = a;
+		a %= room;
+		b = b - old + a;
+	}
+	
+	return true;
+}
+
 // Returns true if the given object collides with the given layer using the given tileset (for pixel-testing)
 bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj)
 {
@@ -80,13 +103,13 @@ bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj)
 	// Wrap the coordinates if necessary
 	if (layer.settings.wrapX)
 	{
-		x1 = signmod(x1, layerWidth);
-		x2 = signmod(x2, layerWidth);
+		if (!signmodPair(x1, x2, layerWidth))
+			printf("Horizontal wrap edge detected! TODO!\n");
 	}
 	if (layer.settings.wrapY)
 	{
-		y1 = signmod(y1, layerHeight);
-		y2 = signmod(y2, layerHeight);
+		if (!signmodPair(y1, y2, layerHeight))
+			printf("Vertical wrap edge detected! TODO!\n");
 	}
 
 	// TODO, I guess: Collisions on the edge of a layer wrap are not properly implemented
@@ -109,13 +132,15 @@ bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj)
 
 	if (layer.settings.wrapX)
 	{
+		if (!signmodPair(objX1, objX2, layerWidth*tileWidth))
+			printf("Horizontal wrap edge detected! TODO!\n");
 		objX1 = signmod(objX1, layerWidth*tileWidth);
 		objX2 = signmod(objX2, layerWidth*tileWidth);
 	}
 	if (layer.settings.wrapY)
 	{
-		objY1 = signmod(objY1, layerHeight*tileHeight);
-		objY2 = signmod(objY2, layerHeight*tileHeight);
+		if (!signmodPair(objY1, objY2, layerHeight*tileHeight))
+			printf("Vertical wrap edge detected! TODO!\n");
 	}
 
 	bool fineColl = rdPtr->fineColl;
