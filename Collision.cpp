@@ -89,7 +89,7 @@ bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj)
 		y2 = signmod(y2, layerHeight);
 	}
 
-	// TODO, I guess: Collisions on the edge of a layer wrap are not properly implemented...
+	// TODO, I guess: Collisions on the edge of a layer wrap are not properly implemented
 
 	// Nothing to do if the object is not within the tile area
 	if (x1 >= layerWidth || y1 >= layerHeight || x2 < 0 || y2 < 0)
@@ -100,7 +100,6 @@ bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj)
 	x2 = min(layerWidth-1, x2);
 	y1 = max(0, y1);
 	y2 = min(layerHeight-1, y2);
-
 
 	// Make object coordinates relative to layer's origin
 	objX1 -= tlX;
