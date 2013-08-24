@@ -6,6 +6,7 @@
 
 #include "Common.h"
 #include "Paramacro.h"
+#include "Helpers.h"
 
 // ============================================================================
 //
@@ -16,7 +17,12 @@
 // NOTE: Requires rdPtr->cndTileset to be set accordingly if fineColl is true!
 long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 {
-	return (long)checkObjectOverlap(rdPtr, *(Layer*)layerParam, *(Tileset*)rdPtr->cndTileset, (LPHO)runObj);
+	Rect rect;
+	rect.x1 = runObj->roHo.hoX - runObj->roHo.hoImgXSpot;
+	rect.x2 = rect.x1 + runObj->roHo.hoImgWidth;
+	rect.y1 = runObj->roHo.hoY - runObj->roHo.hoImgYSpot;
+	rect.y2 = rect.y1 + runObj->roHo.hoImgHeight;
+	return (long)checkRectangleOverlap(rdPtr, *(Layer*)layerParam, *(Tileset*)rdPtr->cndTileset, rect);
 }
 
 CONDITION(
@@ -36,7 +42,6 @@ CONDITION(
 	Layer& layer = (*rdPtr->p->layers)[id];
 	if (!layer.isValid())
 		return false;
-
 
 	// Get layer's collision tileset
 	unsigned char tilesetID = (layer.settings.collision != 0xff) ? layer.settings.collision : layer.settings.tileset;
@@ -641,6 +646,9 @@ EXPRESSION(
 		screen += int((rdPtr->cameraX - layer.settings.offsetX) * layer.settings.scrollX);
 		screen /= layer.settings.tileWidth;
 
+		if (layer.settings.wrapX)
+			screen = signmod(screen, layer.getWidth());
+
 		return screen;
 	}
 
@@ -662,6 +670,9 @@ EXPRESSION(
 		screen -= rdPtr->rHo.hoY;
 		screen += int((rdPtr->cameraY - layer.settings.offsetY) * layer.settings.scrollY);
 		screen /= layer.settings.tileHeight;
+		
+		if (layer.settings.wrapY)
+			screen = signmod(screen, layer.getHeight());
 
 		return screen;
 	}

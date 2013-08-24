@@ -1,33 +1,9 @@
 #include "Common.h"
-
-// Divide x by d, round towards -infinity, always
-inline int floordiv(int x, int d)
-{
-	// Various solutions from the Internet didn't work. This one makes sense and the efficiency is negligible
-	if (x < 0)
-	{
-		int unaligned = x;
-		x = 0;
-
-		while (x > unaligned)
-			x -= d;
-	}
-
-	return x / d;
-}
-
-// Modulo that loops negative numbers as well
-inline int signmod(int x, int room)
-{
-	while (x < 0)
-		x += room;
-
-	return x %= room;
-}
+#include "Helpers.h"
 
 // Wraps a pair of two numbers representing a low and a high boundary whose difference must be retained
 // Returns true if there was no split. Otherwise, split contains the offset from a where the split must be performed
-inline int signmodPair(int& a, int&b, unsigned& split, int room)
+inline int signmodPair(int& a, int&b, unsigned* split, int room)
 {
 	// Wrapping right/bottom
 	if (a >= room)
@@ -45,187 +21,178 @@ inline int signmodPair(int& a, int&b, unsigned& split, int room)
 	}
 
 	// Crossing the line... need to split
-	if (b >= room)
+	if (split && b >= room)
 	{	
-		split = room - a;
+		*split = room - a;
 		return false;
 	}
 
 	return true;
 }
 
-// Like checkObjectOverlapRegion, but with the whole layer as region...
-bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj)
-{
-	RECT region;
-	region.left = 0;
-	region.top = 0;
-	region.right = layer.getWidth() - 1;
-	region.bottom = layer.getHeight() - 1;
-	return checkObjectOverlapRegion(rdPtr, layer, tileset, region, obj);
-}
-
-// Returns true if the given object collides with the given layer region using the given tileset (for pixel-testing)
-// regionFlag is for stack overflow prevention: 1 bit set = X split already performed, 2 bit set = Y split already performed
-bool checkObjectOverlapRegion(LPRDATA rdPtr, Layer& layer, Tileset& tileset, const RECT& region, LPHO obj, int regionFlag, int regionObjPos)
+// Returns true if the given on-screen rectangle collides with the given layer region using the given tileset (for pixel-testing)
+bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect rect)
 {
 	if (!rdPtr->p)
 		return false;
+
+	bool fineColl = rdPtr->fineColl;
 
 	// Store some frequenlayerY used values
 	int tileWidth = layer.settings.tileWidth;
 	int tileHeight = layer.settings.tileHeight;
 	int layerWidth = layer.getWidth();
 	int layerHeight = layer.getHeight();
+	int layerPxWidth = layerWidth * tileWidth;
+	int layerPxHeight = layerHeight * tileHeight;
 
 	// Compute layer position on screen
 	int layerX = layer.getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
 	int layerY = layer.getScreenY(rdPtr->cameraY) + rdPtr->rHo.hoRect.top;
 
-	// Get object coordinates
-	int objX1 = obj->hoX - obj->hoImgXSpot;
-	int objY1 = obj->hoY - obj->hoImgYSpot;
-
 	// Not overlapping visible part, exit
-	if (!regionFlag && !rdPtr->outsideColl)
+	if (!rdPtr->outsideColl)
 	{
-		if (objX1 + obj->hoImgWidth < rdPtr->rHo.hoX - rdPtr->collMargin.left
-		||	objY1 + obj->hoImgHeight < rdPtr->rHo.hoY - rdPtr->collMargin.top
-		||	objX1 > rdPtr->rHo.hoX + rdPtr->rHo.hoImgWidth + rdPtr->collMargin.right
-		||	objY1 > rdPtr->rHo.hoY + rdPtr->rHo.hoImgHeight + rdPtr->collMargin.bottom)
+		if (rect.x2 < rdPtr->rHo.hoX - rdPtr->collMargin.left
+		||	rect.y2 < rdPtr->rHo.hoY - rdPtr->collMargin.top
+		||	rect.x1 > rdPtr->rHo.hoX + rdPtr->rHo.hoImgWidth + rdPtr->collMargin.right
+		||	rect.y1 > rdPtr->rHo.hoY + rdPtr->rHo.hoImgHeight + rdPtr->collMargin.bottom)
 			return false;
 	}
 
-	// Convert to on-screen coordinates
-	objX1 -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
-	objY1 -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
-
-	int objX2 = objX1 + obj->hoImgWidth;
-	int objY2 = objY1 + obj->hoImgHeight;
-
 	// Make object coordinates relative to layer's origin
-	objX1 -= layerX;
-	objY1 -= layerY;
-	objX2 -= layerX;
-	objY2 -= layerY;
+	rect.moveBy(-rdPtr->cameraX-layerX, -rdPtr->cameraY-layerY);
 
 	// Get the tiles that the object overlaps
-	int x1 = floordiv(objX1, tileWidth);
-	int y1 = floordiv(objY1, tileHeight);
-	int x2 = floordiv(objX2 - 1, tileWidth);
-	int y2 = floordiv(objY2 - 1, tileHeight);
 
-	// To calculate the wrapped object coordinate
-	int oldX1 = x1, oldY1 = y1;
+	// Stack of the tile regions that have to be examined
+	// Whenever an object is on the edge
+	// The rectangle stack stores the pixel rectangle's subrect for the according region
+	Rect rectStack[5];
+	unsigned rectCount = 1;
 
+	// The first region to check is the entire object's overlapped tiles
+	rectStack[0] = rect;
 
-	// Wrap the tiles if necessary
-	if (layer.settings.wrapX && (regionFlag & 1) == 0)
+	// Until there are no more rectangles to check...
+	while (rectCount--)
 	{
-		unsigned split;
-		if (!signmodPair(x1, x2, split, layerWidth))
+		Rect subRect = rectStack[rectCount];
+
+
+		// Wrap the tiles if necessary
+		unsigned split = 0xffffffff;
+		if (layer.settings.wrapX)
 		{
-			RECT region = {x1, y1, x2, y2};
-
-			// Create left half
-			RECT lSplit = region;
-			lSplit.right = region.left + split - 1;
-
-			// Create right half
-			RECT rSplit = region;
-			rSplit.left = lSplit.right + 1;
-			rSplit.left %= layerWidth;
-			rSplit.right %= layerWidth;
-
-			printf("T %d, %d, %d, %d\n", region.left, region.top, region.right, region.bottom);
-			printf("L %d, %d, %d, %d\n", lSplit.left, lSplit.top, lSplit.right, lSplit.bottom);
-			printf("R %d, %d, %d, %d\n", rSplit.left, rSplit.top, rSplit.right, rSplit.bottom);
-
-			return checkObjectOverlapRegion(rdPtr, layer, tileset, lSplit, obj, regionFlag | 1, objX1 - (oldX1 - x1) * tileWidth)
-				|| checkObjectOverlapRegion(rdPtr, layer, tileset, rSplit, obj, regionFlag | 1, objX1 - (oldX1 - x1) * tileWidth);
-		}
-	}
-	if (layer.settings.wrapY && (regionFlag & 2) == 0)
-	{
-		unsigned split;
-		if (!signmodPair(y1, y2, split, layerHeight))
-			printf("TY split %d ... ", split);
-	}
-
-
-
-	// Unwrap  object coordinates (according to wrapped tiles)
-	if (regionFlag & 1)
-	{
-		objX1 = regionObjPos;
-		objX2 = regionObjPos + obj->hoImgWidth;
-	}
-	else
-	{
-		objX1 -= (oldX1 - x1) * tileWidth;
-		objX2 -= (oldX1 - x1) * tileWidth;
-	}
-	objY1 -= (oldY1 - y1) * tileHeight;
-	objY2 -= (oldY1 - y1) * tileHeight;
-
-
-	// Limit candidates to possibly overlapping tiles
-	x1 = max(region.left, min(region.right, x1));
-	x2 = max(region.left, min(region.right, x2));
-	y1 = max(region.top, min(region.bottom, y1));
-	y2 = max(region.top, min(region.bottom, y2));
-
-	// Check for any overlapping tile
-	bool fineColl = rdPtr->fineColl;
-	for (int x = x1; x <= x2; ++x)
-	{
-		for (int y = y1; y <= y2; ++y)
-		{
-			Tile* tile = layer.getTile(x, y);
-			if (tile->id != Tile::EMPTY)
+			if (!signmodPair(subRect.x1, subRect.x2, &split, layerPxWidth))
 			{
-				// Bounding box collisions - we're done
-				if (!fineColl)
-					return true;
+				// Create left half
+				Rect& split1 = rectStack[rectCount++];
+				split1 = subRect;
+				split1.x2 = split1.x1 + split - 1;
 
-				// Get bounding box of tile
-				int tileX1 = tileWidth * x;
-				int tileY1 = tileHeight * y;
-				int tileX2 = tileWidth * (x + 1);
-				int tileY2 = tileHeight * (y + 1);
+				// Create right half
+				Rect& split2 = rectStack[rectCount++];
+				split2 = subRect;
+				split2.x1 = split1.x2 + 1;
 
-				// Get intersection box (relative to tile)
-				int intersectX1 = max(objX1, tileX1) - tileX1;
-				int intersectY1 = max(objY1, tileY1) - tileY1;
-				int intersectX2 = min(objX2, tileX2) - tileX1;
-				int intersectY2 = min(objY2, tileY2) - tileY1;
+				// Unwrap split coordinates (should be fail-safe, maybe even unnecessary. Re-investigate!)
+				signmodPair(split1.x1, split1.x2, 0, layerPxWidth);
+				signmodPair(split2.x1, split2.x2, 0, layerPxWidth);
+			}
+		}
+		if (layer.settings.wrapY)
+		{
+			if (!signmodPair(subRect.y1, subRect.y2, &split, layerPxHeight))
+			{
+				// Create left half
+				Rect& split1 = rectStack[rectCount++];
+				split1 = subRect;
+				split1.y2 = split1.y1 + split - 1;
 
-				// Get position of tile in tileset
-				int tilesetX = tile->x * tileWidth;
-				int tilesetY = tile->y * tileHeight;
+				// Create right half
+				Rect& split2 = rectStack[rectCount++];
+				split2 = subRect;
+				split2.y1 = split1.y2 + 1;
 
-				cSurface* surface = tileset.surface;
-				bool alpha = surface->HasAlpha() != 0;
+				// Unwrap split coordinates (should be fail-safe, maybe even unnecessary. Re-investigate!)
+				signmodPair(split1.y1, split1.y2, 0, layerPxHeight);
+				signmodPair(split2.y1, split2.y2, 0, layerPxHeight);
+			}
+		}
 
-				// Check by alpha channel
-				if (alpha)
+		// Split occured -> new regions to check added. This one can now be ignored
+		if (split != 0xffffffff)
+			continue;
+
+		// Calculate the tiles that this rectangle overlaps
+		int x1 = floordiv(subRect.x1, tileWidth);
+		int y1 = floordiv(subRect.y1, tileHeight);
+		int x2 = floordiv(subRect.x2 - 1, tileWidth);
+		int y2 = floordiv(subRect.y2 - 1, tileHeight);
+
+		// Limit candidates to possibly existing tiles
+		x1 = max(0, min(x1, layerWidth - 1));
+		x2 = max(0, min(x2, layerWidth - 1));
+		y1 = max(0, min(y1, layerHeight - 1));
+		y2 = max(0, min(y2, layerHeight - 1));
+
+		// Check for any overlapping tile
+		for (int x = x1; x <= x2; ++x)
+		{
+			for (int y = y1; y <= y2; ++y)
+			{
+				Tile* tile = layer.getTile(x, y);
+				if (tile->id != Tile::EMPTY)
 				{
-					cSurface* alphaSurf = rdPtr->cndAlphaSurf;
+					// Bounding box collisions - we're done
+					if (!fineColl)
+						return true;
 
-					for (int iX = intersectX1; iX < intersectX2; ++iX)
-						for (int iY = intersectY1; iY < intersectY2; ++iY)
-							if (alphaSurf->GetPixelFast8(tilesetX + iX, tilesetY + iY) > 0)
-								return true;
-				}
-				// Check by transparent color
-				else
-				{
-					COLORREF transpCol = surface->GetTransparentColor();
+					// Get bounding box of tile
+					Rect tileBounds;
+					tileBounds.x1 = tileWidth * x;
+					tileBounds.y1 = tileHeight * y;
+					tileBounds.x2 = tileBounds.x1 + tileWidth;
+					tileBounds.y2 = tileBounds.y1 + tileHeight;
 
-					for (int iX = intersectX1; iX < intersectX2; ++iX)
-						for (int iY = intersectY1; iY < intersectY2; ++iY)
-							if (surface->GetPixelFast(tilesetX + iX, tilesetY + iY) != transpCol)
-								return true;
+					// Get pixel offset of tile in tileset
+					int tilesetX = tile->x * tileWidth;
+					int tilesetY = tile->y * tileHeight;
+
+					// Get intersection box (relative to tile)
+					Rect intersect;
+					intersect.x1 = max(subRect.x1, tileBounds.x1) - tileBounds.x1 + tilesetX;
+					intersect.y1 = max(subRect.y1, tileBounds.y1) - tileBounds.y1 + tilesetY;
+					intersect.x2 = min(subRect.x2, tileBounds.x2) - tileBounds.x1 + tilesetX;
+					intersect.y2 = min(subRect.y2, tileBounds.y2) - tileBounds.y1 + tilesetY;
+
+					cSurface* surface = tileset.surface;
+					bool alpha = surface->HasAlpha() != 0;
+
+					// Check by alpha channel
+					if (alpha)
+					{
+						cSurface* alphaSurf = rdPtr->cndAlphaSurf;
+
+						for (int iX = intersect.x1; iX < intersect.x2; ++iX)
+							for (int iY = intersect.y1; iY < intersect.y2; ++iY)
+								if (alphaSurf->GetPixelFast8(iX, iY) > 0)
+									return true;
+					}
+					// Check by transparent color
+					else
+					{
+						COLORREF transpCol = surface->GetTransparentColor();
+
+						if (tilesetX == 240)
+							printf("%d,%d,%d,%d\n", intersect.x1, intersect.y1, intersect.x2, intersect.y2);
+
+						for (int iX = intersect.x1; iX < intersect.x2; ++iX)
+							for (int iY = intersect.y1; iY < intersect.y2; ++iY)
+								if (surface->GetPixelFast(iX, iY) != transpCol)
+									return true;
+					}
 				}
 			}
 		}
@@ -316,7 +283,7 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 //if (rdPtr->outsideColl)
 //{
 //	if (layer.settings.wrapX)
-//		signmodPair(objX1, objX2, split, layerWidth*tileWidth);
+//		signmodPair(rect.x1, rect.x2, split, layerWidth*tileWidth);
 //	if (layer.settings.wrapY)
-//		signmodPair(objY1, objY2, split, layerHeight*tileHeight);
+//		signmodPair(rect.y1, rect.y2, split, layerHeight*tileHeight);
 //}
