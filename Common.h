@@ -26,6 +26,9 @@ using namespace std;
 #include	"ObjectSelection.h"
 
 #define generateEvent(e) callRunTimeFunction(rdPtr, RFUNCTION_GENERATEEVENT, (e), 0)
+bool checkObjectOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, LPHO obj);
+bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, int pixelY);
+
 
 #ifdef HWABETA
 #include <d3d9.h>
