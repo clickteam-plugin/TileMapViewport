@@ -7,12 +7,34 @@
 #include "Common.h"
 #include "Paramacro.h"
 #include "Helpers.h"
+#include "CollisionFuncs.h"
 
 // ============================================================================
 //
 // CONDITIONS
 // 
 // ============================================================================
+
+// Processes an overlapping condition by managing the surface buffers & forwarding the call to ProcessCondition
+long processOverlapCondition(LPRDATA rdPtr, LPRO obj, const Layer& layer, long (*myFunc)(LPRDATA, LPRO, long))
+{
+	cSurface* surface = prepareLayerCollSurf(rdPtr, layer);
+
+	if (!surface)
+		return false;
+
+	long result = 0;
+
+	// If there's a sub-layer filter, we will cache the required pointers
+	cacheOverlapSublayers(rdPtr, layer);
+
+	// Perform overlap test (prepare image buffers for fine collision if necessary)
+	BYTE* buff = prepareFineColl(rdPtr, surface);
+	result = ProcessCondition(rdPtr, (long)obj, (long)&layer, myFunc);
+	unprepareFineColl(rdPtr, surface, buff);
+
+	return result;
+}
 
 // NOTE: Requires rdPtr->cndTileset to be set accordingly if fineColl is true!
 long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
@@ -22,7 +44,7 @@ long cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, long layerParam)
 	rect.x2 = rect.x1 + runObj->roHo.hoImgWidth;
 	rect.y1 = runObj->roHo.hoY - runObj->roHo.hoImgYSpot;
 	rect.y2 = rect.y1 + runObj->roHo.hoImgHeight;
-	return (long)checkRectangleOverlap(rdPtr, *(Layer*)layerParam, *(Tileset*)rdPtr->cndTileset, rect);
+	return (long)checkRectangleOverlap(rdPtr, *(Layer*)layerParam, *rdPtr->cndTileset, rect);
 }
 
 CONDITION(
@@ -31,68 +53,22 @@ CONDITION(
 	/* Flags */			EVFLAGS_ALWAYS|EVFLAGS_NOTABLE,
 	/* Params */		(2, PARAM_OBJECT,"Object", PARAM_NUMBER,"Layer index")
 ) {
-	if (!rdPtr->p)
-		return false;
+	LPRO obj = (LPRO)objParam();
+	unsigned id = (unsigned)intParam();
 
-	unsigned id = (unsigned)param2;
+	long result = 0;
 
-	if (id >= rdPtr->p->layers->size())
-		return false;
-
-	Layer& layer = (*rdPtr->p->layers)[id];
-	if (!layer.isValid())
-		return false;
-
-	// Get layer's collision tileset
-	unsigned char tilesetID = (layer.settings.collision != 0xff) ? layer.settings.collision : layer.settings.tileset;
-	if (tilesetID >= rdPtr->p->tilesets->size())
-		return false;
-
-	rdPtr->cndTileset = &(*rdPtr->p->tilesets)[tilesetID];
-
-	// Get tileset's settings
-	cSurface* surface = rdPtr->cndTileset->surface;
-	if (!surface)
-		return false;
-
-	// Tile box collision
-	long overlapping = 0;
-	if (!rdPtr->fineColl)
+	if (rdPtr->p && id < rdPtr->p->layers->size())
 	{
-		// Perform overlap test
-		overlapping = ProcessCondition(rdPtr, param1, (long)&layer, cndObjOverlapsLayer);
-	}
-	// Fine collisions need some extra work...
-	else
-	{
-		// Prepare surface buffer for reading
-		BYTE* buff;
-		if (surface->HasAlpha())
-		{
-			rdPtr->cndAlphaSurf = surface->GetAlphaSurface();
-			buff = rdPtr->cndAlphaSurf->LockBuffer();
-		}
-		else
-		{
-			buff = surface->LockBuffer();
-		}
-
-		// Perform overlap test
-		overlapping = ProcessCondition(rdPtr, param1, (long)&layer, cndObjOverlapsLayer);
-
-		// Done, now unlock buffers
-		if (surface->HasAlpha())
-		{
-			rdPtr->cndAlphaSurf->UnlockBuffer(buff);
-			surface->ReleaseAlphaSurface(rdPtr->cndAlphaSurf);
-		}
-		else
-		{
-			surface->UnlockBuffer(buff);
-		}
+		Layer& layer = (*rdPtr->p->layers)[id];
+		if (layer.isValid())
+			result = processOverlapCondition(rdPtr, obj, layer, cndObjOverlapsLayer);
 	}
 
-	return overlapping;
+	// Clear the overlap filter that was populated before this condition was called
+	rdPtr->ovlpFilterCount = 0;
+
+	return result;
 }
 
 CONDITION(
@@ -153,6 +129,114 @@ CONDITION(
 	return rdPtr->layerCallback.index;
 }
 
+CONDITION(
+	/* ID */			5,
+	/* Name */			"%o | Sub-layer %0 is %1",
+	/* Flags */			EVFLAGS_ALWAYS,
+	/* Params */		(2, PARAM_NUMBER, "Sub-layer index", PARAM_NUMBER, "Value")
+) {
+	if (rdPtr->p && rdPtr->ovlpFilterCount < 8)
+	{
+		OVERLAPFLT& of = rdPtr->ovlpFilters[rdPtr->ovlpFilterCount++];
+		of.type = OFT_SUBLAYER;
+		of.param = max(0, min(15, param1));
+		of.value = param2;
+	}
+	return true;
+}
+
+CONDITION(
+	/* ID */			6,
+	/* Name */			"%o | Tileset X is %0",
+	/* Flags */			EVFLAGS_ALWAYS,
+	/* Params */		(1, PARAM_NUMBER, "Tileset X")
+) {
+	if (rdPtr->p && rdPtr->ovlpFilterCount < 8)
+	{
+		OVERLAPFLT& of = rdPtr->ovlpFilters[rdPtr->ovlpFilterCount++];
+		of.type = OFT_TILESETX;
+		of.value = param1;
+	}
+	return true;
+}
+
+CONDITION(
+	/* ID */			7,
+	/* Name */			"%o | Tileset Y is %0",
+	/* Flags */			EVFLAGS_ALWAYS,
+	/* Params */		(1, PARAM_NUMBER, "Tileset Y")
+) {
+	if (rdPtr->p && rdPtr->ovlpFilterCount < 8)
+	{
+		OVERLAPFLT& of = rdPtr->ovlpFilters[rdPtr->ovlpFilterCount++];
+		of.type = OFT_TILESETY;
+		of.value = param1;
+	}
+	return true;
+}
+
+CONDITION(
+	/* ID */			8,
+	/* Name */			"%o: Rect (%0, %1)(%2, %3) is overlapping layer %4",
+	/* Flags */			EVFLAGS_ALWAYS|EVFLAGS_NOTABLE,
+	/* Params */		(5, PARAM_NUMBER, "Top-left pixel X", PARAM_NUMBER, "Top-left pixel Y", 
+						PARAM_NUMBER, "Bottom-right pixel X", PARAM_NUMBER, "Bottom-right pixel Y", PARAM_NUMBER,"Layer index")
+) {
+	Rect rect;
+	rect.x1 = intParam();
+	rect.y1 = intParam();
+	rect.x2 = intParam();
+	rect.y2 = intParam();
+	unsigned id = (unsigned)intParam();
+
+	long result = 0;
+
+	if (rdPtr->p && id < rdPtr->p->layers->size())
+	{
+		Layer& layer = (*rdPtr->p->layers)[id];
+		if (layer.isValid())
+		{
+			cSurface* surface = prepareLayerCollSurf(rdPtr, layer);
+
+			if (!surface)
+				return false;
+
+			// If there's a sub-layer filter, we will cache the required pointers
+			cacheOverlapSublayers(rdPtr, layer);
+
+			// Perform overlap test (prepare image buffers for fine collision if necessary)
+			BYTE* buff = prepareFineColl(rdPtr, surface);
+			result = checkRectangleOverlap(rdPtr, layer, *rdPtr->cndTileset, rect);
+			unprepareFineColl(rdPtr, surface, buff);
+		}
+	}
+
+	// Clear the overlap filter that was populated before this condition was called
+	rdPtr->ovlpFilterCount = 0;
+
+	return result;
+}
+
+CONDITION(
+	/* ID */			9,
+	/* Name */			"%o | Tile value is within (%0,%1)(%2,%3)",
+	/* Flags */			EVFLAGS_ALWAYS,
+	/* Params */		(4, PARAM_NUMBER, "Top-left tileset X", PARAM_NUMBER, "Top-left tileset Y",
+						PARAM_NUMBER, "Bottom-right tileset X", PARAM_NUMBER, "Bottom-right tileset Y")
+) {
+	TileRange range;
+	range.a.x = (unsigned char)intParam();
+	range.a.y = (unsigned char)intParam();
+	range.b.x = (unsigned char)intParam();
+	range.b.y = (unsigned char)intParam();
+	if (rdPtr->p && rdPtr->ovlpFilterCount < 8)
+	{
+		OVERLAPFLT& of = rdPtr->ovlpFilters[rdPtr->ovlpFilterCount++];
+		of.type = OFT_TILESETRANGE;
+		of.value = *(int*)&range;
+	}
+	return true;
+}
 // ============================================================================
 //
 // ACTIONS

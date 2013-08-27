@@ -68,7 +68,8 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 	// Stack of the tile regions that have to be examined
 	// Whenever an object is on the edge
 	// The rectangle stack stores the pixel rectangle's rect for the according region
-	Rect rectStack[5];
+	const int RECT_MAX = 8;
+	static Rect rectStack[RECT_MAX];
 	unsigned rectCount = 1;
 
 	// The first region to check is the entire object's overlapped tiles
@@ -78,7 +79,7 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 	while (rectCount--)
 	{
 		// This should NEVER EVER happen, so if it really does, make the user report this issue immediately.
-		if (rectCount >= 5)
+		if (rectCount >= RECT_MAX)
 			MessageBox(0, "Tile Map has a problem. Please post this in the forum thread.", "Rectangle stack overflow!", 0);
 
 		// Get the most important rectangle
@@ -95,10 +96,13 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 				split1 = rect;
 				split1.x2 = split1.x1 + splitOffset - 1;
 
-				// Create right half
-				Rect& split2 = rectStack[rectCount++];
-				split2 = rect;
-				split2.x1 = split1.x2 + 1;
+				if (rectCount < RECT_MAX)
+				{
+					// Create right half
+					Rect& split2 = rectStack[rectCount++];
+					split2 = rect;
+					split2.x1 = split1.x2 + 1;
+				}
 
 				// Fail-safe: Modulo again. From what I know, this is unnecessary.
 				//signmodPair(split1.x1, split1.x2, 0, layerPxWidth);
@@ -109,15 +113,18 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 		{
 			if (!signmodPair(rect.y1, rect.y2, &splitOffset, layerPxHeight))
 			{
-				// Create left half
+				// Create top half
 				Rect& split1 = rectStack[rectCount++];
 				split1 = rect;
 				split1.y2 = split1.y1 + splitOffset - 1;
 
-				// Create right half
-				Rect& split2 = rectStack[rectCount++];
-				split2 = rect;
-				split2.y1 = split1.y2 + 1;
+				if (rectCount < RECT_MAX)
+				{
+					// Create bottom half
+					Rect& split2 = rectStack[rectCount++];
+					split2 = rect;
+					split2.y1 = split1.y2 + 1;
+				}
 			}
 		}
 
@@ -145,6 +152,52 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 				Tile* tile = layer.getTile(x, y);
 				if (tile->id != Tile::EMPTY)
 				{
+					// Apply overlap filters
+					bool filtered = false;
+					for (unsigned f = 0; f < rdPtr->ovlpFilterCount; ++f)
+					{
+						filtered = true;
+						OVERLAPFLT& filter = rdPtr->ovlpFilters[f];
+
+						int value = 0;
+						const SubLayer* subLayer;
+						switch (filter.type)
+						{
+							case OFT_SUBLAYER:
+								
+								if (subLayer  = rdPtr->sublayerCache[filter.param])
+								{
+									subLayer->getCellSafe(x, y, &value);
+									if (value == filter.value)
+										filtered = false;
+								}
+								break;
+							
+							case OFT_TILESETX:
+
+								if (tile->x == filter.value)
+									filtered = false;
+								break;
+
+							case OFT_TILESETY:
+
+								if (tile->y == filter.value)
+									filtered = false;
+								break;
+
+							case OFT_TILESETRANGE:
+
+								TileRange tr = *(TileRange*)&filter.value;
+								if (tr.isWithin(*tile))
+									filtered = false;
+								break;
+						}
+					}
+
+					// This tile is uninteresting for the given filter
+					if (filtered)
+						continue;
+
 					// Bounding box collisions - we're done
 					if (!fineColl)
 						return true;

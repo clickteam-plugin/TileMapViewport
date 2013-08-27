@@ -111,6 +111,9 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	rdPtr->layerCallback.use = false;
 	rdPtr->layerCallback.settings = 0;
 
+	// Overlap stuff
+	rdPtr->ovlpFilterCount = 0;
+
 	return 0;
 }
 

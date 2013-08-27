@@ -6,8 +6,18 @@
 
 	SEPARATOR
 	SUB_START("Collisions")
-		ITEM(0, "Object is overlapping layer ?")
 		ITEM(2, "Pixel is solid ?")
+		SEPARATOR
+		ITEM(0, "Object is overlapping layer ?")
+		ITEM(8, "Rectangle is overlapping layer ?")
+		SUB_START("Filters (place above overlap condition)")
+			SUB_START("Tile value")
+				ITEM(6, "X is...")
+				ITEM(7, "Y is...")
+				ITEM(9, "Value is within range...")
+			SUB_END
+			ITEM(5, "Sub-layer value is...")
+		SUB_END
 	SUB_END
 	SUB_START("Before rendering")
 		ITEM(4, "On specific layer")
