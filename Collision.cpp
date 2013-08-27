@@ -79,7 +79,7 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 	while (rectCount--)
 	{
 		// This should NEVER EVER happen, so if it really does, make the user report this issue immediately.
-		if (rectCount >= RECT_MAX)
+		if (rectCount > RECT_MAX)
 			MessageBox(0, "Tile Map has a problem. Please post this in the forum thread.", "Rectangle stack overflow!", 0);
 
 		// Get the most important rectangle
