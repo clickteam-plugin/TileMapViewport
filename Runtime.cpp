@@ -255,11 +255,12 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			LayerSettings settings = layer.settings;
 
 			// Sub-layer links (assigned via callback)
-			SubLayer* sl_tileset = 0, *sl_scaleX = 0, *sl_scaleY = 0, *sl_angle = 0, *sl_animation = 0;
+			SubLayer* sl_tileset = 0, *sl_scaleX = 0, *sl_scaleY = 0, *sl_angle = 0, *sl_animation = 0, *sl_animationFrame = 0;
 
 			// If necessary, load the sub-layers for per-tile render info
 			assignSubLayerSettingLink(tileset, 1);
 			assignSubLayerSettingLink(animation, 1);
+			assignSubLayerSettingLink(animationFrame, 1);
 
 			// Perform layer callback and update sub-layer links if necessary...
 			if (rdPtr->layerCallback.use)
@@ -397,12 +398,15 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
 							// Default animation
 							unsigned char animation = 0;
+							unsigned animFrame = 0;
 
 							// Sub-layer links
 							if (sl_tileset)
 								tilesetIndex = *sl_tileset->getCell(tX, tY);
 							if (sl_animation)
 								sl_animation->getCellSafe(tX, tY, &animation);
+							if (sl_animationFrame)
+								sl_animationFrame->getCellSafe(tX, tY, &animFrame);
 							if (sl_scaleX)
 								sl_scaleX->getCellSafe(tX, tY, &tileSettings.scaleX);
 							if (sl_scaleY)
@@ -468,7 +472,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							const int tileCount = a.width * a.height;
 							if (tileCount > 1)
 							{
-								int tileIndex = int(time * a.speed);
+								int tileIndex = int(time * a.speed) + animFrame;
 								while (tileIndex < 0)
 									tileIndex += tileCount;
 
