@@ -5,7 +5,8 @@
 // ============================================================================
 
 // Common Include
-#include	"common.h"
+#include "Common.h"
+#include "Helpers.h"
 
 // --------------------
 // GetRunObjectDataSize
@@ -473,20 +474,19 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							if (tileCount > 1)
 							{
 								int tileIndex = int(time * a.speed) + animFrame;
-								while (tileIndex < 0)
-									tileIndex += tileCount;
 
 								// _ - ^ _ - ^ ...
 								if(a.mode == AM_LOOP)
-									tileIndex %= tileCount;
+									tileIndex = signmod(tileIndex, tileCount);
 
 								// _ - ^ - _ - ...
 								else if (a.mode == AM_PINGPONG)
 								{
-									tileIndex %= 2 * tileCount - 2;
+									tileIndex = signmod(tileIndex, 2 * tileCount - 2);
 									if (tileIndex >= tileCount)
 										tileIndex = 2 * tileCount - tileIndex - 2;
 								}
+
 								// _ - ^ ^ ^ ...
 								else if (a.mode == AM_ONCE)
 								{
