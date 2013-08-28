@@ -1,35 +1,6 @@
 #include "Common.h"
 #include "Helpers.h"
 
-// Wraps a pair of two numbers representing a low and a high boundary whose difference must be retained
-// Returns true if there was no split. Otherwise, split contains the offset from a where the split must be performed
-inline int signmodPair(int& a, int&b, unsigned* split, int room)
-{
-	// Wrapping right/bottom
-	if (a >= room)
-	{
-		int old = a;
-		a %= room;
-		b = b - old + a;
-	}
-
-	// Wrapping left/top
-	while (a < 0)
-	{
-		a += room;
-		b += room;
-	}
-
-	// Crossing the line... need to split
-	if (split && b >= room)
-	{	
-		*split = room - a;
-		return false;
-	}
-
-	return true;
-}
-
 // Returns true if the given on-screen rectangle collides with the given layer region using the given tileset (for pixel-testing)
 bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect rect)
 {
@@ -263,8 +234,8 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 	int layerY = layer.getScreenY(rdPtr->cameraY) + rdPtr->rHo.hoRect.top;
 
 	// Get layer size in px
-	int layerWidth = layer.getWidth() * tileWidth;
-	int layerHeight = layer.getHeight() * tileHeight;
+	int layerWidth = layer.getWidth();
+	int layerHeight = layer.getHeight();
 
 	// Not overlapping visible part, exit
 	if (!rdPtr->outsideColl)
@@ -277,24 +248,30 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 	}
 
 	// Convert to on-screen coordinates
-	pixelX -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
-	pixelY -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
+	pixelX -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX + layerX;
+	pixelY -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY + layerY;
 
 	// Get the tile that the object overlaps
-	int tilePosX = floordiv(pixelX - layerX, tileWidth);
-	int tilePosY = floordiv(pixelY - layerY, tileHeight);
+	int tilePosX = floordiv(pixelX, tileWidth);
+	int tilePosY = floordiv(pixelY, tileHeight);
 
-	// Ensure that the tiles are in the layer
-	int width = layer.getWidth();
-	int height = layer.getHeight();
-
-	// Nothing to do if the object is not within the tile area
-	if (tilePosX < 0 || tilePosY < 0 || tilePosX >= width || tilePosY >= height)
+	// Limit X coordinate
+	if (layer.settings.wrapX)
+	{
+		tilePosX = signmod(tilePosX, layerWidth);
+		pixelX = signmod(pixelX, layerWidth * tileWidth);
+	}
+	else if (tilePosX < 0 || tilePosX >= layerWidth)
 		return false;
 
-	// Make object coordinates relative to layer's origin
-	pixelX -= layerX;
-	pixelY -= layerY;
+	// Limit Y coordinate
+	if (layer.settings.wrapY)
+	{
+		tilePosY = signmod(tilePosY, layerHeight);
+		pixelY = signmod(pixelY, layerHeight * tileHeight);
+	}
+	else if (tilePosY < 0 || tilePosY >= layerHeight)
+		return false;
 
 	// Check overlapping tile
 	Tile* tile = layer.getTile(tilePosX, tilePosY);
