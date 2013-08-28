@@ -31,11 +31,12 @@
 // Action menu
 // --------------------------------
 
-#ifdef ACTION_MENU
+#ifdef ACTION_MENU	
 	
 	SEPARATOR
 	SUB_START("Display")
 		ITEM(0, "Set scroll position")
+		ITEM(35, "Set zoom")
 		SEPARATOR
 		ITEM(2, "Set background color")
 		ITEM(1, "Set size")
@@ -82,11 +83,11 @@
 				SEPARATOR
 				ITEM(24, "To tileset")
 				SEPARATOR
-				SUB_START("HWA only")
+				//SUB_START("HWA only")
 					ITEM(27, "Set angle")
 					ITEM(25, "Set X scale")
 					ITEM(26, "Set Y scale")
-				SUB_END
+				//SUB_END
 			SUB_END
 		SUB_END
 	SUB_END

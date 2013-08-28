@@ -17,6 +17,7 @@ PROPS_IDS_START()
 	
 	PROPID_GRP_DISPLAY,
 	PROPID_AUTOSCROLL,
+	PROPID_RESAMPLE,
 	PROPID_TRANSPARENT,
 	PROPID_ACCURATECLIP,
 	PROPID_ANIMMODE,
@@ -47,6 +48,7 @@ PROPS_DATA_START()
 
 	PropData_Group(PROPID_GRP_DISPLAY, (int)"Display", (int)""),
 	PropData_CheckBox(PROPID_TRANSPARENT, (int)"Transparent", (int)"Use with caution - a background may greatly increase the FPS."),
+	PropData_CheckBox(PROPID_RESAMPLE, (int)"Resample tiles", (int)"Applies to zooming and tile scaling/rotating at runtime."),
 	PropData_CheckBox(PROPID_ACCURATECLIP, (int)"Accurate clipping", (int)"Enable accurate clipping of tiles on the border of the viewport area. Disabling may increase FPS. If your viewport covers the whole screen, you can safely turn this off."),
 	PropData_CheckBox(PROPID_AUTOSCROLL, (int)"Follow MMF camera", (int)"The Tile Map automatically follows the MMF camera."),
 	PropData_ComboBox(PROPID_ANIMMODE, (int)"Animation mode", (int)"Determines how the animation time is computed. 0: User-specified (via action). 1: By the actual elapsed time of the current frame. 2: By the configured application framerate.", animModes),
@@ -205,6 +207,8 @@ BOOL WINAPI DLLExport GetPropCheck(LPMV mV, LPEDATA edPtr, UINT nPropID)
 
 		case PROPID_AUTOSCROLL:
 			return edPtr->autoScroll;
+		case PROPID_RESAMPLE:
+			return edPtr->resample;
 		case PROPID_TRANSPARENT:
 			return edPtr->transparent;
 		case PROPID_ACCURATECLIP:
@@ -289,6 +293,11 @@ void WINAPI DLLExport SetPropCheck(LPMV mV, LPEDATA edPtr, UINT nPropID, BOOL nC
 
 	case PROPID_OUTSIDECOLL:
 		edPtr->outsideColl = nCheck ? true : false;
+		mvInvalidateObject(mV, edPtr);
+		break;
+
+	case PROPID_RESAMPLE:
+		edPtr->resample = nCheck ? true : false;
 		mvInvalidateObject(mV, edPtr);
 		break;
 
@@ -599,6 +608,9 @@ int WINAPI DLLExport CreateObject(mv _far *mV, fpLevObj loPtr, LPEDATA edPtr)
 
 	edPtr->outsideColl = false;
 	edPtr->fineColl = true;
+
+	edPtr->resample = true;
+
 	edPtr->__boolPadding = 0;
 
 	return 0;	// No error

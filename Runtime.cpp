@@ -86,6 +86,9 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	}
 	rdPtr->animTime = 0;
 
+	// HWA blit flags
+	rdPtr->blitFlags = edPtr->resample ? STRF_RESAMPLE : 0;
+
 	// Background settings
 	rdPtr->transparent = edPtr->transparent;
 	rdPtr->background = edPtr->background;
@@ -101,6 +104,7 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	memset(&rdPtr->collMargin, 0, sizeof(RECT));
 
 	// Camera/drawing
+	rdPtr->zoom = 1.0f;
 	rdPtr->cameraX = 0;
 	rdPtr->cameraY = 0;
 	rdPtr->autoScroll = edPtr->autoScroll;
@@ -197,6 +201,9 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	// Whether we have to perform pixel clipping on blitted tiles
 	bool clip = !tempSurf && rdPtr->accurateClip;
 
+	// Rendering flags for advanced blitting
+	DWORD blitFlags = rdPtr->blitFlags;
+
 	// Get output surface
 	cSurface* ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
 	cSurface* target = tempSurf ? rdPtr->surface : ps;
@@ -204,10 +211,10 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		return 0;
 	
 	// On-screen coords
-	int vX = rdPtr->rHo.hoRect.left;
-	int vY = rdPtr->rHo.hoRect.top;
-	int width = rdPtr->rHo.hoImgWidth;
-	int height = rdPtr->rHo.hoImgHeight;
+	int viewportX = rdPtr->rHo.hoRect.left;
+	int viewportY = rdPtr->rHo.hoRect.top;
+	int viewportWidth = rdPtr->rHo.hoImgWidth;
+	int viewportHeight = rdPtr->rHo.hoImgHeight;
 
 	// Clear background
 	if (!rdPtr->transparent)
@@ -215,7 +222,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		if (tempSurf)
 			target->Fill(rdPtr->background);
 		else
-			target->Fill(vX, vY, width, height, rdPtr->background);
+			target->Fill(viewportX, viewportY, viewportWidth, viewportHeight, rdPtr->background);
 	}
 
 	// No attached parent... nothing to draw...
@@ -229,7 +236,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	}
 
 	double time = rdPtr->animTime;
-
+	float zoom = rdPtr->zoom;
 
 	// For all wanted layers...
 	unsigned layerCount = rdPtr->p->layers->size();
@@ -293,6 +300,10 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			unsigned short tileWidth = settings.tileWidth;
 			unsigned short tileHeight = settings.tileHeight;
 
+#ifdef HWABETA
+			POINT tileCenter = {tileWidth/2, tileHeight/2};
+#endif
+
 			// Can't render
 			if (!tileWidth || !tileHeight)
 				continue;
@@ -302,62 +313,73 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			int layerHeight = layer.getHeight();
 
 			// On-screen coordinate
-			int tlX = layer.getScreenX(rdPtr->cameraX);
-			int tlY = layer.getScreenY(rdPtr->cameraY);
+			int layerX = layer.getScreenX(rdPtr->cameraX);
+			int layerY = layer.getScreenY(rdPtr->cameraY);
 
 			// See if the layer is visible at all
-			if ((!settings.wrapX && (tlX >= width  || tlX + tileWidth  * layerWidth  < 0))
-			||  (!settings.wrapY && (tlY >= height || tlY + tileHeight * layerHeight < 0)))
+			if ((!settings.wrapX && (layerX >= viewportWidth  || layerX + tileWidth  * layerWidth  < 0))
+			||  (!settings.wrapY && (layerY >= viewportHeight || layerY + tileHeight * layerHeight < 0)))
 				continue;
 
 			int x1 = 0;
 			int y1 = 0;
-			int x2 = layerWidth;
-			int y2 = layerHeight;
+			int x2 = layerWidth/zoom;
+			int y2 = layerHeight/zoom;
 
 			// Additional tiles to render outside of the visible area
 			int borderX = 1 + (rdPtr->tileCallback.use ? rdPtr->tileCallback.borderX : 0);
 			int borderY = 1 + (rdPtr->tileCallback.use ? rdPtr->tileCallback.borderY : 0);
 
 			// Optimize drawing region
-			while (tlX <= -tileWidth*borderX)
-				tlX += tileWidth, x1++;
-			while (tlY <= -tileHeight*borderY)
-				tlY += tileHeight, y1++;
-			while (tlX + (x2-x1)*tileWidth >= width + tileWidth*borderX)
-				x2--;
-			while (tlY + (y2-y1)*tileHeight >= height + tileHeight*borderY)
-				y2--;
+			if (zoom == 1.0f)
+			{
+				while (layerX <= -tileWidth*borderX)
+					layerX += tileWidth, x1++;
+				while (layerY <= -tileHeight*borderY)
+					layerY += tileHeight, y1++;
+				while (layerX + (x2-x1)*tileWidth >= viewportWidth + tileWidth*borderX)
+					x2--;
+				while (layerY + (y2-y1)*tileHeight >= viewportHeight + tileHeight*borderY)
+					y2--;
+			}
+			else
+			{
+				//if (zoom > 1.0f)
+					//borderX += int(zoom), borderY += int(zoom);
+
+				while (layerX <= -tileWidth*borderX*zoom)
+					layerX += tileWidth*zoom, x1++;
+				while (layerY <= -tileHeight*borderY*zoom)
+					layerY += tileHeight*zoom, y1++;
+				while ((layerX + (x2-x1)*tileWidth)*zoom >= viewportWidth + tileWidth*borderX*zoom)
+					x2--;
+				while ((layerY + (y2-y1)*tileHeight)*zoom >= viewportHeight + tileHeight*borderY*zoom)
+					y2--;
+			}
 
 			// Wrapping
 			if (settings.wrapX)
 			{
-				while (tlX > -tileWidth*(borderX-1))
-				{
-					tlX -= tileWidth;
-					x1--;
-				}
-				while (tlX + (x2-x1-borderX+1)*tileWidth  < width)
-				{
+				while (layerX > -tileWidth*(borderX-1))
+					layerX -= tileWidth, x1--;
+				while (layerX + (x2-x1-borderX+1)*tileWidth  < viewportWidth)
 					x2++;
-				}
+
+				signmodPair(x1, x2, 0, layerWidth);
 			}
 			if (settings.wrapY)
 			{
-				while (tlY > -tileHeight*(borderY-1))
-				{
-					tlY -= tileHeight;
-					y1--;
-				}
-				while (tlY + (y2-y1-borderY+1)*tileHeight < height)
-				{
+				while (layerY > -tileHeight*(borderY-1))
+					layerY -= tileHeight, y1--;
+				while (layerY + (y2-y1-borderY+1)*tileHeight < viewportHeight)
 					y2++;
-				}
+
+				signmodPair(y1, y2, 0,  layerHeight);
 			}
 
 			// Draw to screen: Add on-screen offset
-			int onScreenX = tlX + (tempSurf ? 0 : vX);
-			int onScreenY = tlY + (tempSurf ? 0 : vY);
+			int drawX = layerX + (tempSurf ? 0 : viewportX);
+			int drawY = layerY + (tempSurf ? 0 : viewportY);
 
 			// If can render
 			if (x2-x1 > 0 && y2-y1 > 0)
@@ -375,15 +397,15 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 				int offsetX = 0, offsetY = 0;
 
 				// For every visible tile...
-				int screenY = onScreenY;
+				int screenY = drawY;
 				for (int y = y1; y < y2; ++y)
 				{
-					int screenX = onScreenX;
+					int screenX = drawX;
 					for (int x = x1; x < x2; ++x)
 					{
 						// Wrap (if possible anyway)
-						int tX = (x % layerWidth + layerWidth) % layerWidth;
-						int tY = (y % layerHeight + layerHeight) % layerHeight;
+						int tX = x % layerWidth;
+						int tY = y % layerHeight;
 
 						// Get this tile's address
 						Tile tile = *layer.getTile(tX, tY);
@@ -514,16 +536,23 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								break;
 
 #ifdef HWABETA
+
+							// If zoomed in, act as if tiles were transformed
+							if (zoom != 1.0f)
+								tileSettings.transform = true;
+
 							// HWA only: tile angle and scale on callback. Disables accurate clipping!
 							if (tileSettings.transform)
 							{
-								float scaleX = tileSettings.scaleX;
-								float scaleY = tileSettings.scaleY;
+								float scaleX = zoom * tileSettings.scaleX;
+								float scaleY = zoom * tileSettings.scaleY;
 								float angle = tileSettings.angle * 360.0f;
 
-								POINT center = {tileWidth/2, tileHeight/2};
-								tileSurf->BlitEx(*target, screenX+offsetX+center.x, screenY+offsetY+center.y, scaleX, scaleY, tile.x*tileWidth, tile.y*tileHeight, tileWidth, tileHeight,
-									&center, angle, BMODE_TRANSP, blitOp, blitParam);
+								float blitX = drawX + (screenX - drawX + offsetX + tileCenter.x)*zoom;
+								float blitY = drawY + (screenY - drawY + offsetY + tileCenter.y)*zoom;
+
+								tileSurf->BlitEx(*target, blitX, blitY, scaleX, scaleY, tile.x*tileWidth, tile.y*tileHeight, tileWidth, tileHeight,
+									&tileCenter, angle, BMODE_TRANSP, blitOp, blitParam, blitFlags);
 								break;
 							}
 #endif
@@ -538,8 +567,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							else
 							{
 								int dX, dY, sX, sY, sW, sH;
-								dX = screenX + offsetX - vX;
-								dY = screenY + offsetY - vY;
+								dX = screenX + offsetX - viewportX;
+								dY = screenY + offsetY - viewportY;
 								sX = tile.x * tileWidth;
 								sY = tile.y * tileHeight;
 								sW = tileWidth;
@@ -562,18 +591,18 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								}
 								
 								// Clip right
-								if (dX + sW > width)
-									sW -= tileWidth - (width-dX);
+								if (dX + sW > viewportWidth)
+									sW -= tileWidth - (viewportWidth-dX);
 
 								// Clip bottom
-								if (dY + sH > height)
-									sH -= tileHeight - (height-dY);
+								if (dY + sH > viewportHeight)
+									sH -= tileHeight - (viewportHeight-dY);
 
-								if (dX < width && dY < height && sW > 0 && sH > 0)
+								if (dX < viewportWidth && dY < viewportHeight && sW > 0 && sH > 0)
 								{
 									// Apply viewport position
-									dX += vX;
-									dY += vY;
+									dX += viewportX;
+									dY += viewportY;
 
 									tileSurf->Blit(*target, dX, dY, sX, sY, sW, sH, BMODE_TRANSP, blitOp, blitParam);
 								}
@@ -595,7 +624,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	// Finish up
 	if (tempSurf)
 	{
-		rdPtr->surface->Blit(*ps, vX, vY, BMODE_OPAQUE,
+		rdPtr->surface->Blit(*ps, viewportX, viewportY, BMODE_OPAQUE,
 			BlitOp(rdPtr->rs.rsEffect & EFFECT_MASK), rdPtr->rs.rsEffectParam, 0);
 	}
 
