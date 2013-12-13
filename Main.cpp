@@ -25,8 +25,34 @@ long processOverlapCondition(LPRDATA rdPtr, LPRO obj, const Layer& layer, long (
 
 	long result = 0;
 
+<<<<<<< Updated upstream
 	// If there's a sub-layer filter, we will cache the required pointers
 	cacheOverlapSublayers(rdPtr, layer);
+||||||| merged common ancestors
+	// Required for fine collisions
+	Tileset* tileset = rdPtr->cndTileset;
+	
+	// Store tile size (we'll need it often)
+	int tileWidth = layer->tileWidth;
+	int tileHeight = layer->tileHeight;
+
+	// Compute layer position on screen
+	int tlX = getLayerX(rdPtr, layer) + rdPtr->rHo.hoRect.left;
+	int tlY = getLayerY(rdPtr, layer) + rdPtr->rHo.hoRect.top;
+=======
+	// Required for fine collisions
+	Tileset* tileset = rdPtr->cndTileset;
+	cSurface* surface = tileset->surface;
+	bool alpha = surface->HasAlpha() != 0;
+	
+	// Store tile size (we'll need it often)
+	int tileWidth = layer->tileWidth;
+	int tileHeight = layer->tileHeight;
+
+	// Compute layer position on screen
+	int tlX = getLayerX(rdPtr, layer) + rdPtr->rHo.hoRect.left;
+	int tlY = getLayerY(rdPtr, layer) + rdPtr->rHo.hoRect.top;
+>>>>>>> Stashed changes
 
 	// Perform overlap test (prepare image buffers for fine collision if necessary)
 	BYTE* buff = prepareFineColl(rdPtr, surface);
@@ -68,8 +94,163 @@ CONDITION(
 	// Clear the overlap filter that was populated before this condition was called
 	rdPtr->ovlpFilterCount = 0;
 
+<<<<<<< Updated upstream
 	return result;
 }
+||||||| merged common ancestors
+	// Ensure that the tiles are in the layer
+	int width = layer->width;
+	int height = layer->height;
+
+
+	// Nothing to do if the object is not within the tile area
+	if (x1 >= width || y1 >= height || x2 < 0 || y2 < 0)
+		return false;
+
+	// Limit candidates to possibly overlapping tiles
+	x1 = max(0, x1);
+	x2 = min(width-1, x2);
+	y1 = max(0, y1);
+	y2 = min(height-1, y2);
+
+	// Make object coordinates relative to layer's origin
+	objX1 -= tlX;
+	objY1 -= tlY;
+	objX2 -= tlX;
+	objY2 -= tlY;
+
+	bool fineColl = rdPtr->fineColl;
+
+	// Check for any overlapping tile
+	for (int x = x1; x <= x2; ++x)
+	{
+		for (int y = y1; y <= y2; ++y)
+		{
+			Tile* tile = layer->get(x, y);
+			if (tile->x != 0xff && tile->y != 0xff)
+			{
+				// Bounding box collisions - we're done
+				if (!fineColl)
+					return true;
+
+				// Get bounding box of tile
+				int tileX1 = tileWidth * x;
+				int tileY1 = tileHeight * y;
+				int tileX2 = tileWidth * (x + 1);
+				int tileY2 = tileHeight * (y + 1);
+
+				// Get intersection box (relative to tile)
+				int intersectX1 = max(objX1, tileX1) - tileX1;
+				int intersectY1 = max(objY1, tileY1) - tileY1;
+				int intersectX2 = min(objX2, tileX2) - tileX1;
+				int intersectY2 = min(objY2, tileY2) - tileY1;
+
+				// Get position of tile in tileset
+				int tilesetX = tile->x * tileWidth;
+				int tilesetY = tile->y * tileHeight;
+
+				cSurface* surface = tileset->surface;
+				bool alpha = surface->HasAlpha() != 0;
+
+				// Check by alpha channel
+				if (alpha)
+				{
+					cSurface* alphaSurf = rdPtr->cndAlphaSurf;
+
+					for (int iX = intersectX1; iX < intersectX2; ++iX)
+						for (int iY = intersectY1; iY < intersectY2; ++iY)
+							if (alphaSurf->GetPixelFast8(tilesetX + iX, tilesetY + iY) > 0)
+								return true;
+				}
+				// Check by transparent color
+				else
+				{
+					COLORREF transpCol = surface->GetTransparentColor();
+
+					for (int iX = intersectX1; iX < intersectX2; ++iX)
+						for (int iY = intersectY1; iY < intersectY2; ++iY)
+							if (surface->GetPixelFast(tilesetX + iX, tilesetY + iY) != transpCol)
+								return true;
+				}
+			}
+		}
+	}
+=======
+	// Ensure that the tiles are in the layer
+	int width = layer->width;
+	int height = layer->height;
+
+
+	// Nothing to do if the object is not within the tile area
+	if (x1 >= width || y1 >= height || x2 < 0 || y2 < 0)
+		return false;
+
+	// Limit candidates to possibly overlapping tiles
+	x1 = max(0, x1);
+	x2 = min(width-1, x2);
+	y1 = max(0, y1);
+	y2 = min(height-1, y2);
+
+	// Make object coordinates relative to layer's origin
+	objX1 -= tlX;
+	objY1 -= tlY;
+	objX2 -= tlX;
+	objY2 -= tlY;
+
+	bool fineColl = rdPtr->fineColl;
+
+	// Check for any overlapping tile
+	for (int x = x1; x <= x2; ++x)
+	{
+		for (int y = y1; y <= y2; ++y)
+		{
+			Tile* tile = layer->get(x, y);
+			if (tile->id != Tile::EMPTY)
+			{
+				// Bounding box collisions - we're done
+				if (!fineColl)
+					return true;
+
+				// Get bounding box of tile
+				int tileX1 = tileWidth * x;
+				int tileY1 = tileHeight * y;
+				int tileX2 = tileX1 + tileWidth;
+				int tileY2 = tileY1 + tileHeight;
+
+				// Get intersection box (relative to tile)
+				int intersectX1 = max(objX1, tileX1) - tileX1;
+				int intersectY1 = max(objY1, tileY1) - tileY1;
+				int intersectX2 = min(objX2, tileX2) - tileX1;
+				int intersectY2 = min(objY2, tileY2) - tileY1;
+
+				// Get position of tile in tileset
+				int tilesetX = tile->x * tileWidth;
+				int tilesetY = tile->y * tileHeight;
+
+				// Check by alpha channel
+				if (alpha)
+				{
+					cSurface* alphaSurf = rdPtr->cndAlphaSurf;
+
+					for (int iX = intersectX1; iX < intersectX2; ++iX)
+						for (int iY = intersectY1; iY < intersectY2; ++iY)
+							if (alphaSurf->GetPixelFast8(tilesetX + iX, tilesetY + iY) > 0)
+								return true;
+				}
+				// Check by transparent color
+				else
+				{
+					COLORREF transpCol = surface->GetTransparentColor();
+
+					for (int iX = intersectX1; iX < intersectX2; ++iX)
+						for (int iY = intersectY1; iY < intersectY2; ++iY)
+							if (surface->GetPixelFast(tilesetX + iX, tilesetY + iY) != transpCol)
+								return true;
+				}
+			}
+		}
+	}
+>>>>>>> Stashed changes
 
 CONDITION(
 	/* ID */			1,
@@ -86,10 +267,16 @@ CONDITION(
 	/* Flags */			EVFLAGS_ALWAYS|EVFLAGS_NOTABLE,
 	/* Params */		(3, PARAM_NUMBER, "X coordinate", PARAM_NUMBER, "Y coordinate", PARAM_NUMBER,"Layer index")
 ) {
+<<<<<<< Updated upstream
 	int pixelX = intParam();
 	int pixelY = intParam();
 	unsigned id = intParam();
 
+||||||| merged common ancestors
+=======
+	return false;
+
+>>>>>>> Stashed changes
 	if (!rdPtr->p)
 		return false;
 
