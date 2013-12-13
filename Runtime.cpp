@@ -490,7 +490,6 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								}
 							}
 
-<<<<<<< Updated upstream
 							// Animate if there is more than 1 tile in the selected animation
 							Animation& a = rdPtr->anim[animation];
 							const int tileCount = a.width * a.height;
@@ -536,14 +535,6 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							if (!tileSurf)
 								break;
 
-||||||| merged common ancestors
-							// Blit from the surface of the tileset with the tile's index in the layer tilesets
-							if (!clip)
-							{
-								tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
-							}
-=======
->>>>>>> Stashed changes
 #ifdef HWABETA
 
 							// If zoomed in, act as if tiles were transformed
@@ -551,15 +542,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								tileSettings.transform = true;
 
 							// HWA only: tile angle and scale on callback. Disables accurate clipping!
-<<<<<<< Updated upstream
 							if (tileSettings.transform)
-||||||| merged common ancestors
-							else if (rdPtr->callback.transform)
-=======
-							if (rdPtr->callback.transform)
->>>>>>> Stashed changes
 							{
-<<<<<<< Updated upstream
 								float scaleX = zoom * tileSettings.scaleX;
 								float scaleY = zoom * tileSettings.scaleY;
 								float angle = tileSettings.angle * 360.0f;
@@ -570,22 +554,6 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 								tileSurf->BlitEx(*target, blitX, blitY, scaleX, scaleY, tile.x*tileWidth, tile.y*tileHeight, tileWidth, tileHeight,
 									&tileCenter, angle, BMODE_TRANSP, blitOp, blitParam, blitFlags);
 								break;
-||||||| merged common ancestors
-								float scaleX = rdPtr->callback.scaleX;
-								float scaleY = rdPtr->callback.scaleY;
-								float angle = rdPtr->callback.angle;
-
-								POINT center = {tW/2, tH/2};
-								tileSurf->BlitEx(*target, screenX+offsetX+center.x, screenY+offsetY+center.y, scaleX, scaleY, tile->x*tW, tile->y*tH, tW, tH,
-									&center, angle, BMODE_TRANSP, blitOp, blitParam);
-=======
-								POINT center = {tW/2, tH/2};
-								tileSurf->BlitEx(*target, screenX+offsetX+center.x, screenY+offsetY+center.y,
-									rdPtr->callback.scaleX, rdPtr->callback.scaleY, tile->x*tW, tile->y*tH, tW, tH,
-									&center, rdPtr->callback.angle, BMODE_TRANSP, blitOp, blitParam);
-
-								continue;
->>>>>>> Stashed changes
 							}
 #endif
 							
@@ -593,13 +561,6 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 							if (!clip)
 							{
 								tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile.x * tileWidth, tile.y * tileHeight, tileWidth, tileHeight, BMODE_TRANSP, blitOp, blitParam);
-							}
-
-							// Blit from the surface of the tileset with the tile's index in the layer tilesets
-							if (!clip)
-							{
-								//tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
-								tileSurf->Blit(*target, screenX+offsetX, screenY+offsetY, tile->x*tW, tile->y*tH, tW, tH, BMODE_TRANSP, blitOp, blitParam);
 							}
 
 							// Before blitting, perform clipping so that we won't draw outside of the viewport...
@@ -660,8 +621,6 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 		}
 	}
 
-#ifndef HWABETA
-
 	// Finish up
 	if (tempSurf)
 	{
@@ -672,17 +631,11 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 	// Update window region
 	WinAddZone(rdPtr->rHo.hoAdRunHeader->rhIdEditWin, &rdPtr->rHo.hoRect);
 
-<<<<<<< Updated upstream
 	// Clear pointers...
 	rdPtr->tileCallback.settings = 0;
 	rdPtr->tileCallback.tile = 0;
 	rdPtr->layerCallback.settings = 0;
 
-||||||| merged common ancestors
-=======
-#endif
-
->>>>>>> Stashed changes
 	return 0;
 }
 
