@@ -300,8 +300,12 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			unsigned short tileWidth = settings.tileWidth;
 			unsigned short tileHeight = settings.tileHeight;
 
+			// On-screen tile width
+			float renderTileWidth = tileWidth * zoom;
+			float renderTileHeight = tileHeight * zoom;
+
 #ifdef HWABETA
-			POINT tileCenter = {tileWidth/2, tileHeight/2};
+			POINT tileCenter = {int(renderTileWidth/2), int(renderTileHeight/2)};
 #endif
 
 			// Can't render
@@ -313,73 +317,83 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			int layerHeight = layer.getHeight();
 
 			// On-screen coordinate
-			int layerX = layer.getScreenX(rdPtr->cameraX);
-			int layerY = layer.getScreenY(rdPtr->cameraY);
+			float drawX = layer.getScreenX(rdPtr->cameraX) * zoom;
+			float drawY = layer.getScreenY(rdPtr->cameraY) * zoom;
 
 			// See if the layer is visible at all
-			if ((!settings.wrapX && (layerX >= viewportWidth  || layerX + tileWidth  * layerWidth  < 0))
-			||  (!settings.wrapY && (layerY >= viewportHeight || layerY + tileHeight * layerHeight < 0)))
+			if ((!settings.wrapX && (drawX >= viewportWidth  || drawX + renderTileWidth * layerWidth  < 0))
+			||  (!settings.wrapY && (drawY >= viewportHeight || drawY + renderTileHeight * layerHeight < 0)))
 				continue;
 
+			// Region to draw
 			int x1 = 0;
 			int y1 = 0;
-			int x2 = layerWidth/zoom;
-			int y2 = layerHeight/zoom;
+			int x2 = layerWidth; // Exclusive
+			int y2 = layerHeight;
 
 			// Additional tiles to render outside of the visible area
 			int borderX = 1 + (rdPtr->tileCallback.use ? rdPtr->tileCallback.borderX : 0);
 			int borderY = 1 + (rdPtr->tileCallback.use ? rdPtr->tileCallback.borderY : 0);
+			int pixelBorderX = int(borderX * renderTileWidth);
+			int pixelBorderY = int(borderY * renderTileHeight);
 
 			// Optimize drawing region
-			if (zoom == 1.0f)
-			{
-				while (layerX <= -tileWidth*borderX)
-					layerX += tileWidth, x1++;
-				while (layerY <= -tileHeight*borderY)
-					layerY += tileHeight, y1++;
-				while (layerX + (x2-x1)*tileWidth >= viewportWidth + tileWidth*borderX)
-					x2--;
-				while (layerY + (y2-y1)*tileHeight >= viewportHeight + tileHeight*borderY)
-					y2--;
-			}
-			else
-			{
-				//if (zoom > 1.0f)
-					//borderX += int(zoom), borderY += int(zoom);
-
-				while (layerX <= -tileWidth*borderX*zoom)
-					layerX += tileWidth*zoom, x1++;
-				while (layerY <= -tileHeight*borderY*zoom)
-					layerY += tileHeight*zoom, y1++;
-				while ((layerX + (x2-x1)*tileWidth)*zoom >= viewportWidth + tileWidth*borderX*zoom)
-					x2--;
-				while ((layerY + (y2-y1)*tileHeight)*zoom >= viewportHeight + tileHeight*borderY*zoom)
-					y2--;
-			}
+			while (drawX <= -pixelBorderX)
+				drawX += (int)renderTileWidth, x1++;
+			while (drawY <= -pixelBorderY)
+				drawY += (int)renderTileHeight, y1++;
+			while (drawX >= viewportWidth + pixelBorderX - (x2-x1)*renderTileWidth)
+				x2--;
+			while (drawY >= viewportHeight + pixelBorderY - (y2-y1)*renderTileWidth)
+				y2--;
 
 			// Wrapping
 			if (settings.wrapX)
 			{
-				while (layerX > -tileWidth*(borderX-1))
-					layerX -= tileWidth, x1--;
-				while (layerX + (x2-x1-borderX+1)*tileWidth  < viewportWidth)
+				// TODO: Find optimization
+				if (zoom != 1.0f)
+				{
+					while (drawX > -renderTileWidth*(borderX-1))
+						drawX -= renderTileWidth*layerWidth, x1 -= layerWidth;
+				}
+				else
+				{
+					while (drawX > -renderTileWidth*(borderX-1))
+						drawX -= renderTileWidth, x1++;
+				}
+
+				while (drawX < viewportWidth - renderTileWidth*(x2-x1-borderX+1))
 					x2++;
 
 				signmodPair(x1, x2, 0, layerWidth);
 			}
+
 			if (settings.wrapY)
 			{
-				while (layerY > -tileHeight*(borderY-1))
-					layerY -= tileHeight, y1--;
-				while (layerY + (y2-y1-borderY+1)*tileHeight < viewportHeight)
+				// TODO: Find optimization
+				if (zoom != 1.0f)
+				{
+					while (drawY > -renderTileHeight*(borderY-1))
+						drawY -= renderTileHeight*layerHeight, y1 -= layerHeight;
+				}
+				else
+				{
+					while (drawY > -renderTileHeight*(borderY-1))
+						drawY -= renderTileHeight, y1++;
+				}
+
+				while (drawY < viewportHeight - renderTileHeight*(y2-y1-borderY+1))
 					y2++;
 
-				signmodPair(y1, y2, 0,  layerHeight);
+				signmodPair(y1, y2, 0, layerHeight);
 			}
 
 			// Draw to screen: Add on-screen offset
-			int drawX = layerX + (tempSurf ? 0 : viewportX);
-			int drawY = layerY + (tempSurf ? 0 : viewportY);
+			if (!tempSurf)
+			{
+				drawX += viewportX;
+				drawY += viewportY;
+			}
 
 			// If can render
 			if (x2-x1 > 0 && y2-y1 > 0)
@@ -397,18 +411,18 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 				int offsetX = 0, offsetY = 0;
 
 				// For every visible tile...
-				int screenY = drawY;
-				for (int y = y1; y < y2; ++y)
+				int screenY = (int)drawY;
+				for (int unwrappedY = y1; unwrappedY < y2; ++unwrappedY)
 				{
-					int screenX = drawX;
-					for (int x = x1; x < x2; ++x)
+					int screenX = (int)drawX;
+					for (int unwrappedX = x1; unwrappedX < x2; ++unwrappedX)
 					{
-						// Wrap (if possible anyway)
-						int tX = x % layerWidth;
-						int tY = y % layerHeight;
+						// Calculate wrapped coordinate (in case wrapping is enabled)
+						int x = unwrappedX % layerWidth;
+						int y = unwrappedY % layerHeight;
 
 						// Get this tile's address
-						Tile tile = *layer.getTile(tX, tY);
+						Tile tile = *layer.getTile(x, y);
 
 						// Calculate position and render the tile, exit when impossible
 						do
@@ -425,17 +439,17 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
 							// Sub-layer links
 							if (sl_tileset)
-								tilesetIndex = *sl_tileset->getCell(tX, tY);
+								tilesetIndex = *sl_tileset->getCell(x, y);
 							if (sl_animation)
-								sl_animation->getCellSafe(tX, tY, &animation);
+								sl_animation->getCellSafe(x, y, &animation);
 							if (sl_animationFrame)
-								sl_animationFrame->getCellSafe(tX, tY, &animFrame);
+								sl_animationFrame->getCellSafe(x, y, &animFrame);
 							if (sl_scaleX)
-								sl_scaleX->getCellSafe(tX, tY, &tileSettings.scaleX);
+								sl_scaleX->getCellSafe(x, y, &tileSettings.scaleX);
 							if (sl_scaleY)
-								sl_scaleY->getCellSafe(tX, tY, &tileSettings.scaleY);
+								sl_scaleY->getCellSafe(x, y, &tileSettings.scaleY);
 							if (sl_angle)
-								sl_angle->getCellSafe(tX, tY, &tileSettings.angle);
+								sl_angle->getCellSafe(x, y, &tileSettings.angle);
 
 							// Determine tile opacity
 							BlitOp blitOp = settings.opacity < 0.999f ? BOP_BLEND : BOP_COPY;

@@ -9,13 +9,16 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 
 	bool fineColl = rdPtr->fineColl;
 
-	// Store some frequenlayerY used values
+	// Store some frequently used values
+	float zoom = rdPtr->zoom;
 	int tileWidth = layer.settings.tileWidth;
 	int tileHeight = layer.settings.tileHeight;
+	float renderTileWidth = tileWidth * zoom;
+	float renderTileHeight = tileHeight * zoom;
 	int layerWidth = layer.getWidth();
 	int layerHeight = layer.getHeight();
-	int layerPxWidth = layerWidth * tileWidth;
-	int layerPxHeight = layerHeight * tileHeight;
+	int layerPxWidth = layerWidth * renderTileWidth;
+	int layerPxHeight = layerHeight * renderTileHeight;
 
 	// Compute layer position on screen
 	int layerX = layer.getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
@@ -104,10 +107,10 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 			continue;
 
 		// Calculate the tiles that this rectangle overlaps
-		int x1 = floordiv(rect.x1, tileWidth);
-		int y1 = floordiv(rect.y1, tileHeight);
-		int x2 = floordiv(rect.x2 - 1, tileWidth);
-		int y2 = floordiv(rect.y2 - 1, tileHeight);
+		int x1 = floordiv<float>(rect.x1, renderTileWidth);
+		int y1 = floordiv<float>(rect.y1, renderTileHeight);
+		int x2 = floordiv<float>(rect.x2 - 1, renderTileWidth);
+		int y2 = floordiv<float>(rect.y2 - 1, renderTileHeight);
 
 		// Limit candidates to possibly existing tiles
 		x1 = max(0, min(x1, layerWidth - 1));
@@ -175,10 +178,10 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 
 					// Get bounding box of tile
 					Rect tileBounds;
-					tileBounds.x1 = tileWidth * x;
-					tileBounds.y1 = tileHeight * y;
-					tileBounds.x2 = tileBounds.x1 + tileWidth;
-					tileBounds.y2 = tileBounds.y1 + tileHeight;
+					tileBounds.x1 = renderTileWidth * x;
+					tileBounds.y1 = renderTileHeight * y;
+					tileBounds.x2 = tileBounds.x1 + renderTileWidth;
+					tileBounds.y2 = tileBounds.y1 + renderTileHeight;
 
 					// Get pixel offset of tile in tileset
 					int tilesetX = tile->x * tileWidth;
@@ -190,6 +193,11 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 					intersect.y1 = max(rect.y1, tileBounds.y1) - tileBounds.y1 + tilesetY;
 					intersect.x2 = min(rect.x2, tileBounds.x2) - tileBounds.x1 + tilesetX;
 					intersect.y2 = min(rect.y2, tileBounds.y2) - tileBounds.y1 + tilesetY;
+
+					intersect.x1 /= zoom;
+					intersect.y1 /= zoom;
+					intersect.x2 /= zoom;
+					intersect.y2 /= zoom;
 
 					cSurface* surface = tileset.surface;
 					bool alpha = surface->HasAlpha() != 0;
@@ -252,14 +260,14 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 	pixelY -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY + layerY;
 
 	// Get the tile that the object overlaps
-	int tilePosX = floordiv(pixelX, tileWidth);
-	int tilePosY = floordiv(pixelY, tileHeight);
+	int tilePosX = floordiv<float>(pixelX, tileWidth * rdPtr->zoom);
+	int tilePosY = floordiv<float>(pixelY, tileHeight * rdPtr->zoom);
 
 	// Limit X coordinate
 	if (layer.settings.wrapX)
 	{
 		tilePosX = signmod(tilePosX, layerWidth);
-		pixelX = signmod(pixelX, layerWidth * tileWidth);
+		pixelX = signmod(pixelX, layerWidth * tileWidth * rdPtr->zoom);
 	}
 	else if (tilePosX < 0 || tilePosX >= layerWidth)
 		return false;
@@ -268,7 +276,7 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 	if (layer.settings.wrapY)
 	{
 		tilePosY = signmod(tilePosY, layerHeight);
-		pixelY = signmod(pixelY, layerHeight * tileHeight);
+		pixelY = signmod(pixelY, layerHeight * tileHeight * rdPtr->zoom);
 	}
 	else if (tilePosY < 0 || tilePosY >= layerHeight)
 		return false;

@@ -668,7 +668,7 @@ ACTION(
 	MessageBox(0, "Zoom is only available in HWA.", "Tile Map Error", 0);
 #endif
 	rdPtr->zoom = fltParam();
-	rdPtr->zoom = max(0.04f, rdPtr->zoom);
+	rdPtr->zoom = max(0.1f, rdPtr->zoom);
 	if (rdPtr->zoom >= 0.999f && rdPtr->zoom <= 1.001f)
 		rdPtr->zoom = 1.0f;
 	rdPtr->rc.rcChanged = true;
@@ -764,7 +764,7 @@ EXPRESSION(
 		Layer& layer = (*rdPtr->p->layers)[layerIndex];
 		screen -= rdPtr->rHo.hoX;
 		screen += int((rdPtr->cameraX - layer.settings.offsetX) * layer.settings.scrollX);
-		screen /= layer.settings.tileWidth;
+		screen /= layer.settings.tileWidth * rdPtr->zoom;
 
 		if (layer.settings.wrapX)
 			screen = signmod(screen, layer.getWidth());
@@ -789,7 +789,7 @@ EXPRESSION(
 		Layer& layer = (*rdPtr->p->layers)[layerIndex];
 		screen -= rdPtr->rHo.hoY;
 		screen += int((rdPtr->cameraY - layer.settings.offsetY) * layer.settings.scrollY);
-		screen /= layer.settings.tileHeight;
+		screen /= layer.settings.tileWidth * rdPtr->zoom;
 		
 		if (layer.settings.wrapY)
 			screen = signmod(screen, layer.getHeight());
@@ -812,7 +812,7 @@ EXPRESSION(
 	if (i < rdPtr->p->layers->size())
 	{
 		Layer& layer = (*rdPtr->p->layers)[i];
-		return rdPtr->rHo.hoX + layer.getScreenX(rdPtr->cameraX) + layer.settings.tileWidth * pos;
+		return rdPtr->rHo.hoX + layer.getScreenX(rdPtr->cameraX) + layer.settings.tileWidth * pos * rdPtr->zoom;
 	}
 	
 	return 0;
@@ -830,7 +830,7 @@ EXPRESSION(
 	if (i < rdPtr->p->layers->size())
 	{
 		Layer& layer = (*rdPtr->p->layers)[i];
-		return rdPtr->rHo.hoY + layer.getScreenY(rdPtr->cameraY) + layer.settings.tileHeight * pos;
+		return rdPtr->rHo.hoY + layer.getScreenY(rdPtr->cameraY) + layer.settings.tileHeight * pos * rdPtr->zoom;
 	}
 	
 	return 0;
