@@ -352,7 +352,7 @@ ACTION(
 		rdPtr->tileCallback.settings->angle = fltParam();
 	}
 #else
-	MessageBox(0, "Rotation is only available in HWA.", "Tile Map Error", 0);
+	//MessageBox(0, "Rotation is only available in HWA.", "Tile Map Error", 0);
 #endif
 }
 
@@ -369,7 +369,7 @@ ACTION(
 		rdPtr->tileCallback.settings->scaleX = fltParam();
 	}
 #else
-	MessageBox(0, "Scaling is only available in HWA.", "Tile Map Error", 0);
+	//MessageBox(0, "Scaling is only available in HWA.", "Tile Map Error", 0);
 #endif
 }
 
@@ -386,7 +386,7 @@ ACTION(
 		rdPtr->tileCallback.settings->scaleY = fltParam();
 	}
 #else
-	MessageBox(0, "Scaling is only available in HWA.", "Tile Map Error", 0);
+	//MessageBox(0, "Scaling is only available in HWA.", "Tile Map Error", 0);
 #endif
 }
 
@@ -550,9 +550,6 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Sub-layer index")
 ) {
-#ifndef HWABETA
-	MessageBox(0, "Scaling is only available in HWA.", "Tile Map Error", 0);
-#endif
 	rdPtr->layerCallback.link.scaleX = (unsigned char)intParam();
 }
 
@@ -562,9 +559,6 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Sub-layer index")
 ) {
-#ifndef HWABETA
-	MessageBox(0, "Scaling is only available in HWA.", "Tile Map Error", 0);
-#endif
 	rdPtr->layerCallback.link.scaleY = (unsigned char)intParam();
 }
 
@@ -574,9 +568,6 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER,"Sub-layer index")
 ) {
-#ifndef HWABETA
-	MessageBox(0, "Rotation is only available in HWA.", "Tile Map Error", 0);
-#endif
 	rdPtr->layerCallback.link.angle = (unsigned char)intParam();
 }
 
@@ -664,9 +655,6 @@ ACTION(
 	/* Flags */			0,
 	/* Params */		(1, PARAM_NUMBER, "Zoom (1.0: 100%)")
 ) {
-#ifndef HWABETA
-	MessageBox(0, "Zoom is only available in HWA.", "Tile Map Error", 0);
-#endif
 	rdPtr->zoom = fltParam();
 	rdPtr->zoom = max(0.1f, rdPtr->zoom);
 	if (rdPtr->zoom >= 0.999f && rdPtr->zoom <= 1.001f)
