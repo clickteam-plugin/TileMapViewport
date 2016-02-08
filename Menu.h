@@ -92,9 +92,9 @@
 		SUB_END
 	SUB_END
 	SUB_START("On tile")
-		ITEM(32, "Set animation")
-		SEPARATOR
+        ITEM(6, "Set tile value")
 		ITEM(15, "Set tileset")
+		ITEM(32, "Set animation")
 		SEPARATOR
 		ITEM(3, "Set offset")
 		ITEM(11, "Set opacity")

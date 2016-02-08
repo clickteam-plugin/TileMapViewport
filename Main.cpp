@@ -327,7 +327,7 @@ ACTION(
 
 ACTION(
 	/* ID */			7,
-	/* Name */			"Set tileCallback tile overflow to (%0, %1)",
+	/* Name */			"Set callback tile overflow to (%0, %1)",
 	/* Flags */			0,
 	/* Params */		(2, PARAM_NUMBER, "Number of extra tile columns to render on each side (Default: 0)",
 							PARAM_NUMBER, "Number of extra tile rows to render on each side (Default: 0)")
