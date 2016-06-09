@@ -37,6 +37,7 @@
 	SUB_START("Display")
 		ITEM(0, "Set scroll position")
 		ITEM(35, "Set zoom")
+		ITEM(36, "Set zoom origin")
 		SEPARATOR
 		ITEM(2, "Set background color")
 		ITEM(1, "Set size")

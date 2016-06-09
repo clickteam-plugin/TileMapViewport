@@ -44,7 +44,7 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 
 	printf("\n");
 #endif
-	
+
 	LPRH rhPtr = rdPtr->rHo.hoAdRunHeader;
 
 	rdPtr->rHo.hoImgWidth = edPtr->width;
@@ -101,10 +101,13 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	// Misc
 	rdPtr->outsideColl = edPtr->outsideColl;
 	rdPtr->fineColl = edPtr->fineColl;
+	rdPtr->zoomColl = !edPtr->unscaledColl;
 	memset(&rdPtr->collMargin, 0, sizeof(RECT));
 
 	// Camera/drawing
 	rdPtr->zoom = 1.0f;
+	rdPtr->zoomPointX = 0.0f;
+	rdPtr->zoomPointY = 0.0f;
 	rdPtr->cameraX = 0;
 	rdPtr->cameraY = 0;
 	rdPtr->autoScroll = edPtr->autoScroll;

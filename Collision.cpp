@@ -10,7 +10,8 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 	bool fineColl = rdPtr->fineColl;
 
 	// Store some frequently used values
-	float zoom = rdPtr->zoom;
+	const float zoom = rdPtr->zoomColl ? rdPtr->zoom : 1.0f;
+
 	int tileWidth = layer.settings.tileWidth;
 	int tileHeight = layer.settings.tileHeight;
 	float renderTileWidth = tileWidth * zoom;
@@ -233,6 +234,8 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer& layer, Tileset& tileset, Rect r
 // Returns true if the given coordinate is solid
 bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, int pixelY)
 {
+	float zoom = rdPtr->zoomColl ? rdPtr->zoom : 1.0f;
+
 	// Store tile size
 	int tileWidth = layer.settings.tileWidth;
 	int tileHeight = layer.settings.tileHeight;
@@ -260,14 +263,14 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 	pixelY -= rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY + layerY;
 
 	// Get the tile that the object overlaps
-	int tilePosX = floordiv<float>(pixelX, tileWidth * rdPtr->zoom);
-	int tilePosY = floordiv<float>(pixelY, tileHeight * rdPtr->zoom);
+	int tilePosX = floordiv<float>(pixelX, tileWidth * zoom);
+	int tilePosY = floordiv<float>(pixelY, tileHeight * zoom);
 
 	// Limit X coordinate
 	if (layer.settings.wrapX)
 	{
 		tilePosX = signmod(tilePosX, layerWidth);
-		pixelX = signmod(pixelX, layerWidth * tileWidth * rdPtr->zoom);
+		pixelX = signmod(pixelX, layerWidth * tileWidth * zoom);
 	}
 	else if (tilePosX < 0 || tilePosX >= layerWidth)
 		return false;
@@ -276,7 +279,7 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer& layer, Tileset& tileset, int pixelX, 
 	if (layer.settings.wrapY)
 	{
 		tilePosY = signmod(tilePosY, layerHeight);
-		pixelY = signmod(pixelY, layerHeight * tileHeight * rdPtr->zoom);
+		pixelY = signmod(pixelY, layerHeight * tileHeight * zoom);
 	}
 	else if (tilePosY < 0 || tilePosY >= layerHeight)
 		return false;

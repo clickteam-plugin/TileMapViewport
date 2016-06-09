@@ -171,7 +171,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib mmfs2.lib"
-				OutputFile="c:\mmf2\extensions\TileMapView.mfx"
+				OutputFile="c:\Program Files (x86)\Multimedia Fusion Developer 2\Extensions\TileMapView.mfx"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				AdditionalLibraryDirectories="..\..\lib\"
@@ -338,7 +338,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\..\Inc;..\TileMap"
-				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK;HWABETA"
+				PreprocessorDefinitions="_DEBUG;HWABETA;WIN32;_WINDOWS;STRICT;COXSDK;IN_EXT_VERSION2;RSDK;HWABETA"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				PrecompiledHeaderFile=".\Debug/rSDK.pch"
@@ -365,7 +365,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib mmfs2hwa.lib"
-				OutputFile="c:\mmf2\extensions\hwa\TileMapView.mfx"
+				OutputFile="c:\Program Files (x86)\Multimedia Fusion Developer 2\Extensions\Hwa\TileMapView.mfx"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				AdditionalLibraryDirectories="..\..\lib\"

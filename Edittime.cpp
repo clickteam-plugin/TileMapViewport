@@ -21,12 +21,12 @@ PROPS_IDS_START()
 	PROPID_TRANSPARENT,
 	PROPID_ACCURATECLIP,
 	PROPID_ANIMMODE,
-	//PROPID_TRANSPCOLOR,
 	PROPID_BGCOLOR,
 
 	PROPID_GRP_COLL,
 	PROPID_OUTSIDECOLL,
 	PROPID_FINECOLL,
+	PROPID_DONTSCALECOLL,
 
 	PROPID_GRP_LAYERS,
 	PROPID_MINLAYER,
@@ -55,7 +55,8 @@ PROPS_DATA_START()
 
 	PropData_Group(PROPID_GRP_COLL, (int)"Collisions", (int)""),
 	PropData_CheckBox(PROPID_OUTSIDECOLL, (int)"Handle outside of viewport", (int)"Collisions with tiles are handled even if they aren't within the viewport."),
-	PropData_CheckBox(PROPID_FINECOLL, (int)"Pixel-based collisions", (int)"\"Transparent pixels of a tile won't collide. This is a lot slower, so if your game doesn't have slopes, uncheck it."),
+	PropData_CheckBox(PROPID_FINECOLL, (int)"Pixel-based collisions", (int)"Transparent pixels of a tile won't collide. This is a lot slower, so if your game doesn't have slopes, uncheck it."),
+	PropData_CheckBox(PROPID_DONTSCALECOLL, (int)"Do not apply zoom", (int)"Objects will collide against the unzoomed Tile Map (as if the zoom factor was 1)."),
 
 	PropData_Group(PROPID_GRP_LAYERS, (int)"Layers to draw", (int)""),
 	PropData_EditNumber(PROPID_MINLAYER, (int)"Minimum", (int)"0-based index of the lowest layer to draw."),
@@ -217,6 +218,8 @@ BOOL WINAPI DLLExport GetPropCheck(LPMV mV, LPEDATA edPtr, UINT nPropID)
 			return edPtr->outsideColl;
 		case PROPID_FINECOLL:
 			return edPtr->fineColl;
+		case PROPID_DONTSCALECOLL:
+			return edPtr->unscaledColl;
 
 
 	}
@@ -303,6 +306,11 @@ void WINAPI DLLExport SetPropCheck(LPMV mV, LPEDATA edPtr, UINT nPropID, BOOL nC
 
 	case PROPID_FINECOLL:
 		edPtr->fineColl = nCheck ? true : false;
+		mvInvalidateObject(mV, edPtr);
+		break;
+
+	case PROPID_DONTSCALECOLL:
+		edPtr->unscaledColl = nCheck ? true : false;
 		mvInvalidateObject(mV, edPtr);
 		break;
 
@@ -608,6 +616,7 @@ int WINAPI DLLExport CreateObject(mv _far *mV, fpLevObj loPtr, LPEDATA edPtr)
 
 	edPtr->outsideColl = false;
 	edPtr->fineColl = true;
+	edPtr->unscaledColl = false;
 
 	edPtr->resample = true;
 

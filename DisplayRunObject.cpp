@@ -81,6 +81,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
 	double time = rdPtr->animTime;
 	float zoom = rdPtr->zoom;
+	float zoomPointX = rdPtr->zoomPointX;
+	float zoomPointY = rdPtr->zoomPointY;
 
 	unsigned layerCount = rdPtr->p->layers->size();
 
@@ -160,8 +162,13 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 			int layerHeight = layer.getHeight();
 
 			// On-screen coordinate
-			float drawX = layer.getScreenX(rdPtr->cameraX) * zoom;
-			float drawY = layer.getScreenY(rdPtr->cameraY) * zoom;
+			float drawX = layer.getScreenX(rdPtr->cameraX);
+			float drawY = layer.getScreenY(rdPtr->cameraY);
+
+			float viewportXBias = viewportWidth * zoomPointX;
+			float viewportYBias = viewportHeight * zoomPointY;
+			drawX = (drawX - viewportXBias) * zoom + viewportXBias;
+			drawY = (drawY - viewportYBias) * zoom + viewportYBias;
 
 			// See if the layer is visible at all
 			if ((!settings.wrapX && (drawX >= viewportWidth  || drawX + renderTileWidth * layerWidth  < 0))
@@ -217,7 +224,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 					while (drawY > -renderTileHeight*(borderY-1))
 						drawY -= renderTileHeight, y1++;
 
-				while (drawY < viewportHeight - renderTileHeight*(y2-y1-borderY+1))
+				while (drawY < viewportWidth - renderTileWidth*(y2-y1-borderY+1))
 					y2++;
 
 				signmodPair(y1, y2, 0, layerHeight);

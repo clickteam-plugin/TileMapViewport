@@ -656,9 +656,21 @@ ACTION(
 	/* Params */		(1, PARAM_NUMBER, "Zoom (1.0: 100%)")
 ) {
 	rdPtr->zoom = fltParam();
-	rdPtr->zoom = max(0.1f, rdPtr->zoom);
+	rdPtr->zoom = max(0.05f, rdPtr->zoom);
 	if (rdPtr->zoom >= 0.999f && rdPtr->zoom <= 1.001f)
 		rdPtr->zoom = 1.0f;
+	rdPtr->rc.rcChanged = true;
+}
+
+ACTION(
+	/* ID */			36,
+	/* Name */			"Set zoom origin to (%0, %1)",
+	/* Flags */			0,
+	/* Params */		(2, PARAM_NUMBER, "Zoom X origin (0: Left, 0.5: Center, 1: Right)",
+							PARAM_NUMBER, "Zoom Y origin (0: Top, 0.5: Center, 1: Bottom)")
+) {
+	rdPtr->zoomPointX = fltParam();
+	rdPtr->zoomPointY = fltParam();
 	rdPtr->rc.rcChanged = true;
 }
 
