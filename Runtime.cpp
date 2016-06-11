@@ -46,6 +46,8 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 #endif
 
 	LPRH rhPtr = rdPtr->rHo.hoAdRunHeader;
+	rdPtr->isHwa = rhPtr->rh4.rh4Mv->mvCallFunction(NULL, EF_ISHWA, 0, 0, 0) != 0;
+	rdPtr->isUnicode = rhPtr->rh4.rh4Mv->mvCallFunction(NULL, EF_ISUNICODE, 0, 0, 0) != 0;
 
 	rdPtr->rHo.hoImgWidth = edPtr->width;
 	rdPtr->rHo.hoImgHeight = edPtr->height;
@@ -57,6 +59,7 @@ short WINAPI DLLExport CreateRunObject(LPRDATA rdPtr, LPEDATA edPtr, fpcob cobPt
 	// Create surface, get MMF depth..
 	cSurface* ps = WinGetSurface((int)rdPtr->rHo.hoAdRunHeader->rhIdEditWin);
 	rdPtr->depth = ps->GetDepth();
+
 
 	rdPtr->surface = 0;
 

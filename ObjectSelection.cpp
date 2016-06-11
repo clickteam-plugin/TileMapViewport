@@ -1,148 +1,218 @@
-#include "Common.h"
+#include "ObjectSelection.h"
 
-long ProcessCondition(LPRDATA rdPtr, long param1, long param2, long (*myFunc)(LPRDATA, LPRO, long))
+
+ObjectSelection::ObjectSelection(LPRH rhPtr, bool isHwa, bool isUnicode)
 {
-	short p1 = ((eventParam*)param1)->evp.evpW.evpW0;
-	
-	PEVT pe = (PEVT)(((LPBYTE)param1)-CND_SIZE);
-	bool relativeTrue = !(pe->evtFlags2 & EVFLAG2_NOT);
+	this->rhPtr = rhPtr;
+	this->ObjectList = rhPtr->rhObjectList;		//get a pointer to the mmf object list
+	this->OiList = rhPtr->rhOiList;				//get a pointer to the mmf object info list
+	this->QualToOiList = rhPtr->rhQualToOiList;	//get a pointer to the mmf qualifier to Oi list
 
-	LPRH rhPtr = rdPtr->rHo.hoAdRunHeader;      //get a pointer to the mmf runtime header
-	LPOBL objList = rhPtr->rhObjectList;     //get a pointer to the mmf object list
-	LPOIL oiList = rhPtr->rhOiList;             //get a pointer to the mmf object info list
-	LPQOI qualToOiList = rhPtr->rhQualToOiList; //get a pointer to the mmf qualifier to Oi list
-	
-	if ( p1 & 0x8000 ) // dealing with a qualifier...
+	oiListItemSize = sizeof(objInfoList);
+#ifndef UNICODE
+	if(isUnicode)
+		oiListItemSize += 24;
+#endif
+#ifndef HWABETA
+	if(isHwa)
+		oiListItemSize += sizeof(LPVOID);
+#endif
+}
+
+
+//Selects *all* objects of the given object-type
+void ObjectSelection::SelectAll(short Oi)
+{
+	const LPOIL pObjectInfo = GetOILFromOI(Oi);
+
+	pObjectInfo->oilNumOfSelected = pObjectInfo->oilNObjects;
+	pObjectInfo->oilListSelected = pObjectInfo->oilObject;
+	pObjectInfo->oilEventCount = rhPtr->rh2.rh2EventCount;
+
+	int i = pObjectInfo->oilObject;
+	while(i >= 0)
 	{
-		LPQOI qualToOiStart = (LPQOI)(((char*)qualToOiList) + (p1 & 0x7FFF));
-		LPQOI qualToOi = qualToOiStart;
-		bool passed = false;
-		
-		for(qualToOi; qualToOi->qoiOiList >= 0; qualToOi = (LPQOI)(((char*)qualToOi) + 4))
-		{
-			LPOIL curOi = oiList + qualToOi->qoiOiList;
-			
-			if(curOi->oilNObjects <= 0) continue;	//No Objects
-
-			bool hasSelection = curOi->oilEventCount == rhPtr->rh2.rh2EventCount;
-			if(hasSelection && curOi->oilNumOfSelected <= 0) continue; //No selected objects
-			
-			LPHO curObj = NULL;
-			LPHO prevSelected = NULL;
-			int count = 0;
-			int selected = 0;
-			if(hasSelection) //Already has selected objects
-			{
-				curObj = objList[curOi->oilListSelected].oblOffset;
-				count = curOi->oilNumOfSelected;
-			}
-			else //No previously selected objects
-			{
-				curObj = objList[curOi->oilObject].oblOffset;
-				count = curOi->oilNObjects;
-				curOi->oilEventCount = rhPtr->rh2.rh2EventCount; //tell mmf that the object selection is relevant to this event
-			}
-			
-			for(int i = 0; i < count; i++)
-			{
-				//Check here
-				if((0 != myFunc(rdPtr,(LPRO)curObj,param2)) == relativeTrue)
-				{
-					if(selected++ == 0)
-					{
-						curOi->oilListSelected = curObj->hoNumber;
-					}
-					else
-					{
-						prevSelected->hoNextSelected = curObj->hoNumber;
-					}
-					prevSelected = curObj;
-				}
-				if(hasSelection)
-				{
-					if(curObj->hoNextSelected >= 0) curObj = objList[curObj->hoNextSelected].oblOffset;
-					else break;
-				}
-				else
-				{
-					if(curObj->hoNumNext >= 0) curObj = objList[curObj->hoNumNext].oblOffset;
-					else break;
-				}
-			}
-			curOi->oilNumOfSelected = selected;
-			if ( selected > 0 )
-			{
-				prevSelected->hoNextSelected = -1;
-				passed = true;
-			}
-			else
-			{
-				curOi->oilListSelected = -32768;
-			}
-		}
-		
-		return passed;
-	}
-	else	// Not a qualifier
-	{
-		LPOIL curOi = oiList + p1;
-		if(curOi->oilNObjects <= 0) return false;	//No Objects
-
-		bool hasSelection = curOi->oilEventCount == rhPtr->rh2.rh2EventCount;
-		if(hasSelection && curOi->oilNumOfSelected <= 0) return false; //No selected objects
-		
-		LPHO curObj = NULL;
-		LPHO prevSelected = NULL;
-		int count = 0;
-		int selected = 0;
-		if(hasSelection) //Already has selected objects
-		{
-			curObj = objList[curOi->oilListSelected].oblOffset;
-			count = curOi->oilNumOfSelected;
-		}
-		else //No previously selected objects
-		{
-			curObj = objList[curOi->oilObject].oblOffset;
-			count = curOi->oilNObjects;
-			curOi->oilEventCount = rhPtr->rh2.rh2EventCount; //tell mmf that the object selection is relevant to this event
-		}
-
-		for(int i = 0; i < count; i++)
-		{
-			//Check here
-			if((0 != myFunc(rdPtr,(LPRO)curObj,param2)) == relativeTrue)
-			{
-				if(selected++ == 0)
-				{
-					curOi->oilListSelected = curObj->hoNumber;
-				}
-				else
-				{
-					prevSelected->hoNextSelected = curObj->hoNumber;
-				}
-				prevSelected = curObj;
-			}
-			if(hasSelection)
-			{
-				if(curObj->hoNextSelected < 0) break;
-				else curObj = objList[curObj->hoNextSelected].oblOffset;
-			}
-			else
-			{
-				if(curObj->hoNumNext < 0) break;
-				else curObj = objList[curObj->hoNumNext].oblOffset;
-			}
-		}
-		curOi->oilNumOfSelected = selected;
-		if ( selected > 0 )
-		{
-			prevSelected->hoNextSelected = -1;
-			return relativeTrue;
-		}
-		else
-		{
-			curOi->oilListSelected = -32768;
-		}
-		return !relativeTrue;
+		LPHO pObject = ObjectList[i].oblOffset;
+		pObject->hoNextSelected = pObject->hoNumNext;
+		i = pObject->hoNumNext;
 	}
 }
+
+//Resets all objects of the given object-type
+void ObjectSelection::SelectNone(short Oi)
+{
+	LPOIL pObjectInfo = GetOILFromOI(Oi);
+
+	pObjectInfo->oilNumOfSelected = 0;
+	pObjectInfo->oilListSelected = -1;
+	pObjectInfo->oilEventCount = rhPtr->rh2.rh2EventCount;
+}
+
+//Resets the SOL and inserts only one given object
+void ObjectSelection::SelectOneObject(LPRO object)
+{
+	LPOIL pObjectInfo = GetOILFromOI(object->roHo.hoOi);
+
+	pObjectInfo->oilNumOfSelected = 1;
+	pObjectInfo->oilEventCount = rhPtr->rh2.rh2EventCount;
+	pObjectInfo->oilListSelected = object->roHo.hoNumber;
+	ObjectList[object->roHo.hoNumber].oblOffset->hoNextSelected = -1;
+}
+
+//Resets the SOL and inserts the given list of objects
+void ObjectSelection::SelectObjects(short Oi, LPRO* objects, int count)
+{
+	if(count <= 0)
+		return;
+
+	LPOIL pObjectInfo = GetOILFromOI(Oi);
+
+	pObjectInfo->oilNumOfSelected = count;
+	pObjectInfo->oilEventCount = rhPtr->rh2.rh2EventCount;
+	
+	short prevNumber = objects[0]->roHo.hoNumber;
+	pObjectInfo->oilListSelected = prevNumber;
+	
+	for(int i=1; i<count; i++)
+	{
+		short currentNumber = objects[i]->roHo.hoNumber;
+		ObjectList[prevNumber].oblOffset->hoNextSelected = currentNumber;
+		prevNumber = currentNumber;
+	}
+	ObjectList[prevNumber].oblOffset->hoNextSelected = -1;
+}
+
+
+//Run a custom filter on the SOL (via function callback)
+bool ObjectSelection::FilterObjects(LPRDATA rdPtr, short Oi, bool negate, bool (*filterFunction)(LPRDATA, LPRO))
+{
+	if(Oi & 0x8000)
+		return FilterQualifierObjects(rdPtr, Oi & 0x7FFF, negate, filterFunction) ^ negate;
+	else
+		return FilterNonQualifierObjects(rdPtr, Oi, negate, filterFunction) ^ negate;
+}
+
+
+//Filter qualifier objects
+bool ObjectSelection::FilterQualifierObjects(LPRDATA rdPtr, short Oi, bool negate, bool (*filterFunction)(LPRDATA, LPRO))
+{
+	LPQOI CurrentQualToOiStart = (LPQOI)((char*)QualToOiList + Oi);
+	LPQOI CurrentQualToOi = CurrentQualToOiStart;
+
+	bool hasSelected = false;
+
+	while(CurrentQualToOi->qoiOiList >= 0)
+	{
+		LPOIL CurrentOi = GetOILFromOI(CurrentQualToOi->qoiOiList);
+		hasSelected |= FilterNonQualifierObjects(rdPtr, CurrentOi->oilOi, negate, filterFunction);
+		CurrentQualToOi = (LPQOI)((char*)CurrentQualToOi + 4);
+	}
+	return hasSelected;
+}
+
+//Filter normal objects
+bool ObjectSelection::FilterNonQualifierObjects(LPRDATA rdPtr, short Oi, bool negate, bool (*filterFunction)(LPRDATA, LPRO))
+{
+	LPOIL pObjectInfo = GetOILFromOI(Oi);
+	bool hasSelected = false;
+
+	if(pObjectInfo->oilEventCount != rhPtr->rh2.rh2EventCount)
+		SelectAll(Oi);	//The SOL is invalid, must reset.
+
+	//If SOL is empty
+	if(pObjectInfo->oilNumOfSelected <= 0)
+		return false;
+
+	int firstSelected = -1;
+	int count = 0;
+	int current = pObjectInfo->oilListSelected;
+	LPHO previous = NULL;
+
+	while(current >= 0)
+	{
+		LPHO pObject = ObjectList[current].oblOffset;
+		bool useObject = filterFunction(rdPtr, (LPRO)pObject) ^ negate;
+		hasSelected |= useObject;
+
+		if(useObject)
+		{
+			if(firstSelected == -1)
+				firstSelected = current;
+
+			if(previous != NULL)
+				previous->hoNextSelected = current;
+			
+			previous = pObject;
+			count++;
+		}
+		current = pObject->hoNextSelected;
+	}
+	if(previous != NULL)
+		previous->hoNextSelected = -1;
+
+	pObjectInfo->oilListSelected = firstSelected;
+	pObjectInfo->oilNumOfSelected = count;
+
+	return hasSelected;
+}
+
+//Return the number of selected objects for the given object-type
+int ObjectSelection::GetNumberOfSelected(short Oi)
+{
+	if(Oi & 0x8000)
+	{
+		Oi &= 0x7FFF;	//Mask out the qualifier part
+		int numberSelected = 0;
+
+		LPQOI CurrentQualToOiStart = (LPQOI)((char*)QualToOiList + Oi);
+		LPQOI CurrentQualToOi = CurrentQualToOiStart;
+
+		while(CurrentQualToOi->qoiOiList >= 0)
+		{
+			LPOIL CurrentOi = GetOILFromOI(CurrentQualToOi->qoiOiList);
+			numberSelected += CurrentOi->oilNumOfSelected;
+			CurrentQualToOi = (LPQOI)((char*)CurrentQualToOi + 4);
+		}
+		return numberSelected;
+	}
+	else
+	{
+		LPOIL pObjectInfo = GetOILFromOI(Oi);
+		return pObjectInfo->oilNumOfSelected;
+	}
+}
+
+bool ObjectSelection::ObjectIsOfType(LPRO object, short Oi)
+{
+	if(Oi & 0x8000)
+	{
+		Oi &= 0x7FFF;	//Mask out the qualifier part
+		LPQOI CurrentQualToOiStart = (LPQOI)((char*)QualToOiList + Oi);
+		LPQOI CurrentQualToOi = CurrentQualToOiStart;
+
+		while(CurrentQualToOi->qoiOiList >= 0)
+		{
+			LPOIL CurrentOi = GetOILFromOI(CurrentQualToOi->qoiOiList);
+			if(CurrentOi->oilOi == object->roHo.hoOi)
+				return true;
+			CurrentQualToOi = (LPQOI)((char*)CurrentQualToOi + 4);
+		}
+		return false;
+	}
+	else
+		return (object->roHo.hoOi == Oi);
+}
+
+
+//Returns the object-info structure from a given object-type
+LPOIL ObjectSelection::GetOILFromOI(short Oi)
+{
+	for(int i=0; i<rhPtr->rhNumberOi; ++i)
+	{
+		LPOIL oil = (LPOIL)(((char*)OiList) + oiListItemSize*i);
+		if(oil->oilOi == Oi)
+			return oil;
+	}
+	return NULL;
+}
+
