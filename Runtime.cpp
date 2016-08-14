@@ -287,15 +287,7 @@ short WINAPI DLLExport ContinueRunObject(LPRDATA rdPtr) {
 // Useful for storing global data
 //
 void WINAPI DLLExport StartApp(mv _far *mV, CRunApp *pApp) {
-  // Example
-  // -------
-  // Delete global data (if restarts application)
-  //	CMyData* pData = (CMyData*)mV->mvGetExtUserData(pApp, hInstLib);
-  //	if ( pData != NULL )
-  //	{
-  //		delete pData;
-  //		mV->mvSetExtUserData(pApp, hInstLib, NULL);
-  //	}
+    InitOiListItemSize(mV);
 }
 
 // -------------------

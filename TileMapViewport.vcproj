@@ -615,6 +615,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\DynExt.cpp"
+				>
+			</File>
+			<File
 				RelativePath="Edittime.cpp"
 				>
 				<FileConfiguration

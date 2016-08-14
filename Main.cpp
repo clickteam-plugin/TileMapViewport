@@ -16,7 +16,7 @@
 // ============================================================================
 
 // NOTE: Requires rdPtr->cndTileset to be set accordingly if fineColl is true!
-bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj) {
+bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, void *userdata) {
   Rect rect;
   rect.x1 = runObj->roHo.hoX - runObj->roHo.hoImgXSpot;
   rect.x2 = rect.x1 + runObj->roHo.hoImgWidth;
@@ -31,51 +31,43 @@ CONDITION(
     /* Name */ "%o: %0 is overlapping layer %1",
     /* Flags */ EVFLAGS_ALWAYS | EVFLAGS_NOTABLE,
     /* Params */ (2, PARAM_OBJECT, "Object", PARAM_NUMBER, "Layer index")) {
-  LPRO obj = (LPRO)objParam();
-  unsigned id = (unsigned)intParam();
+	PEVT pe = (PEVT)(((LPBYTE)rdPtr->rHo.hoCurrentParam) - CND_SIZE);
+	bool isNegated = (pe->evtFlags2 & EVFLAG2_NOT);
+	short oi = ((eventParam *)param1)->evp.evpW.evpW0;
 
-  long result = 0;
+	LPRO obj = (LPRO)objParam();
+	unsigned id = (unsigned)intParam();
 
-  if (rdPtr->p && id < rdPtr->p->layers->size()) {
-    Layer &layer = (*rdPtr->p->layers)[id];
-    if (layer.isValid()) {
-      cSurface *surface = prepareLayerCollSurf(rdPtr, layer);
+	long result = 0;
 
-      if (!surface)
-        return false;
+	if (rdPtr->p && id < rdPtr->p->layers->size()) {
+		Layer &layer = (*rdPtr->p->layers)[id];
+		if (layer.isValid()) {
+		  cSurface *surface = prepareLayerCollSurf(rdPtr, layer);
 
-      // Prepare object selection
-      LPRH rhPtr = rdPtr->rHo.hoAdRunHeader;
-      ObjectSelection select = ObjectSelection(rdPtr->rHo.hoAdRunHeader,
-                                               rdPtr->isHwa, rdPtr->isUnicode);
+		  if (!surface)
+			return false;
 
-      // If there's a sub-layer filter, we will cache the required
-      // pointers
-      cacheOverlapSublayers(rdPtr, layer);
+		  // If there's a sub-layer filter, we will cache the required
+		  // pointers
+		  cacheOverlapSublayers(rdPtr, layer);
 
-      // Perform overlap test (prepare image buffers for fine collision if
-      // necessary)
-      BYTE *buff = prepareFineColl(rdPtr, surface);
+		  // Perform overlap test (prepare image buffers for fine collision if
+		  // necessary)
+		  BYTE *buff = prepareFineColl(rdPtr, surface);
 
-      // Gets a pointer to the event information structure and find out if
-      // the condition is
-      // negated
-      PEVT pe = (PEVT)(((LPBYTE)param1) - CND_SIZE);
-      bool isNegated = (pe->evtFlags2 & EVFLAG2_NOT);
-      short oi = ((eventParam *)param1)->evp.evpW.evpW0;
+		  //// Perform test
+		  rdPtr->cndLayer = &layer;
+		  result = FilterObjects(rdPtr, oi, cndObjOverlapsLayer, NULL, isNegated);
+		  unprepareFineColl(rdPtr, surface, buff);
+		}
+	}
 
-      // Perform test
-      rdPtr->cndLayer = &layer;
-      result = select.FilterObjects(rdPtr, oi, isNegated, cndObjOverlapsLayer);
-      unprepareFineColl(rdPtr, surface, buff);
-    }
-  }
+	// Clear the overlap filter that was populated before this condition was
+	// called
+	rdPtr->ovlpFilterCount = 0;
 
-  // Clear the overlap filter that was populated before this condition was
-  // called
-  rdPtr->ovlpFilterCount = 0;
-
-  return result;
+	return result;
 }
 
 CONDITION(
