@@ -365,7 +365,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib mmfs2hwa.lib"
-				OutputFile="c:\Program Files (x86)\Clickteam Fusion Developer 2.5\Extensions\Hwa\TileMapView.mfx"
+				OutputFile="c:\mmf2\Extensions\Hwa\TileMapView.mfx"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				AdditionalLibraryDirectories="..\..\lib\"
