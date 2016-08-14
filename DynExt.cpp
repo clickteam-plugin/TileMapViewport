@@ -5,8 +5,7 @@ int oiListItemSize = 0;
 void InitOiListItemSize(LPMV pMv)
 {
     oiListItemSize = sizeof(objInfoList);
-    if (pMv->mvCallFunction(NULL, EF_ISUNICODE, (LPARAM)0, (LPARAM)0,
-                            (LPARAM)0))
+    if (pMv->mvCallFunction(NULL, EF_ISUNICODE, (LPARAM)0, (LPARAM)0, (LPARAM)0))
         oiListItemSize += 24;
 #ifndef HWABETA
     if (pMv->mvCallFunction(NULL, EF_ISHWA, (LPARAM)0, (LPARAM)0, (LPARAM)0))
