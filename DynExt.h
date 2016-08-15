@@ -18,14 +18,13 @@ template <class T> inline T * PtrAddBytes(T * ptr, int bytes)
 }
 
 // HWA/Unicode handling, courtesy of Yves
-#define EF_ISHWA 112 // Returns TRUE if HWA version (editor and runtime)
-#define EF_ISUNICODE                                                           \
-    113 // Returns TRUE if the editor or runtime is in Unicode mode
+#define EF_ISHWA 112          // Returns TRUE if HWA version (editor and runtime)
+#define EF_ISUNICODE 113      // Returns TRUE if the editor or runtime is in Unicode mode
 #define EF_GETAPPCODEPAGE 114 // Returns the code page of the application
 
 extern int oiListItemSize;
 void InitOiListItemSize(LPMV pMv);
-#define GetOILPtr(oiListPtr, oiListIndex)                                      \
+#define GetOILPtr(oiListPtr, oiListIndex)                                                \
     PtrAddBytes(oiListPtr, oiListItemSize * oiListIndex)
 #define NextOILPtr(oiListItemPtr) PtrAddBytes(oiListItemPtr, oiListItemSize)
 

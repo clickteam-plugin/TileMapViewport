@@ -32,8 +32,7 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
         if (rect.x2 < rdPtr->rHo.hoX - rdPtr->collMargin.left ||
             rect.y2 < rdPtr->rHo.hoY - rdPtr->collMargin.top ||
             rect.x1 > rdPtr->rHo.hoX + rdPtr->rHo.hoImgWidth + rdPtr->collMargin.right ||
-            rect.y1 > rdPtr->rHo.hoY + rdPtr->rHo.hoImgHeight +
-                          rdPtr->collMargin.bottom)
+            rect.y1 > rdPtr->rHo.hoY + rdPtr->rHo.hoImgHeight + rdPtr->collMargin.bottom)
             return false;
     }
 

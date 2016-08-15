@@ -25,8 +25,7 @@ using namespace std;
 
 #include "ObjectSelection.h"
 
-#define generateEvent(e)                                                       \
-    callRunTimeFunction(rdPtr, RFUNCTION_GENERATEEVENT, (e), 0)
+#define generateEvent(e) callRunTimeFunction(rdPtr, RFUNCTION_GENERATEEVENT, (e), 0)
 bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect rect);
 bool checkPixelSolid(LPRDATA rdPtr, Layer & layer, Tileset & tileset, int pixelX, int pixelY);
 

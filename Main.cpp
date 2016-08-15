@@ -84,8 +84,7 @@ CONDITION(
     /* ID */ 2,
     /* Name */ "%o: Point (%0, %1) is solid on layer %2",
     /* Flags */ EVFLAGS_ALWAYS | EVFLAGS_NOTABLE,
-    /* Params */ (3, PARAM_NUMBER, "X coordinate", PARAM_NUMBER, "Y coordinate",
-                  PARAM_NUMBER, "Layer index"))
+    /* Params */ (3, PARAM_NUMBER, "X coordinate", PARAM_NUMBER, "Y coordinate", PARAM_NUMBER, "Layer index"))
 {
     int pixelX = intParam();
     int pixelY = intParam();
@@ -102,9 +101,8 @@ CONDITION(
         return false;
 
     // Get layer's collision tileset
-    unsigned char tilesetID = (layer.settings.collision != 0xff)
-                                  ? layer.settings.collision
-                                  : layer.settings.tileset;
+    unsigned char tilesetID = (layer.settings.collision != 0xff) ? layer.settings.collision
+                                                                 : layer.settings.tileset;
     if (tilesetID >= rdPtr->p->tilesets->size())
         return false;
 
@@ -179,8 +177,8 @@ CONDITION(
     /* ID */ 8,
     /* Name */ "%o: Rect (%0, %1)(%2, %3) is overlapping layer %4",
     /* Flags */ EVFLAGS_ALWAYS | EVFLAGS_NOTABLE,
-    /* Params */ (5, PARAM_NUMBER, "Top-left pixel X", PARAM_NUMBER,
-                  "Top-left pixel Y", PARAM_NUMBER, "Bottom-right pixel X", PARAM_NUMBER,
+    /* Params */ (5, PARAM_NUMBER, "Top-left pixel X", PARAM_NUMBER, "Top-left pixel Y",
+                  PARAM_NUMBER, "Bottom-right pixel X", PARAM_NUMBER,
                   "Bottom-right pixel Y", PARAM_NUMBER, "Layer index"))
 {
     Rect rect;
@@ -415,9 +413,8 @@ ACTION(
     /* Name */ "Set collision margin to (%0, %1, %2, %3)",
     /* Flags */ 0,
     /* Params */ (4, PARAM_NUMBER, "Extra pixels to the left", PARAM_NUMBER,
-                  "Extra pixels to the top", PARAM_NUMBER,
-                  "Extra pixels to the right", PARAM_NUMBER,
-                  "Extra pixels to the bottom"))
+                  "Extra pixels to the top", PARAM_NUMBER, "Extra pixels to the right",
+                  PARAM_NUMBER, "Extra pixels to the bottom"))
 {
     rdPtr->collMargin.left = intParam();
     rdPtr->collMargin.top = intParam();
@@ -583,8 +580,8 @@ ACTION(
     /* ID */ 29,
     /* Name */ "Set animation %0 speed to %1",
     /* Flags */ 0,
-    /* Params */ (2, PARAM_NUMBER, "Animation index (0-255, 0: Default)",
-                  PARAM_NUMBER, "Speed in frames per second"))
+    /* Params */ (2, PARAM_NUMBER, "Animation index (0-255, 0: Default)", PARAM_NUMBER,
+                  "Speed in frames per second"))
 {
     unsigned char i = (unsigned char)intParam();
     rdPtr->anim[i].speed = fltParam();
@@ -595,8 +592,8 @@ ACTION(
     /* ID */ 30,
     /* Name */ "Set animation %0 width to %1",
     /* Flags */ 0,
-    /* Params */ (2, PARAM_NUMBER, "Animation index (0-255, 0: Default)",
-                  PARAM_NUMBER, "Number of tiles to use horizontally"))
+    /* Params */ (2, PARAM_NUMBER, "Animation index (0-255, 0: Default)", PARAM_NUMBER,
+                  "Number of tiles to use horizontally"))
 {
     unsigned char i = (unsigned char)intParam();
     int value = intParam();
@@ -608,8 +605,8 @@ ACTION(
     /* ID */ 31,
     /* Name */ "Set animation %0 height to %1",
     /* Flags */ 0,
-    /* Params */ (2, PARAM_NUMBER, "Animation index (0-255, 0: Default)",
-                  PARAM_NUMBER, "Number of tiles to use vertically"))
+    /* Params */ (2, PARAM_NUMBER, "Animation index (0-255, 0: Default)", PARAM_NUMBER,
+                  "Number of tiles to use vertically"))
 {
     unsigned char i = (unsigned char)intParam();
     int value = intParam();
@@ -621,8 +618,8 @@ ACTION(
     /* ID */ 32,
     /* Name */ "Set animation %0 mode to %1",
     /* Flags */ 0,
-    /* Params */ (2, PARAM_NUMBER, "Animation index (0-255, 0: Default)",
-                  PARAM_NUMBER, "Mode (0: Loop, 1: Ping-Pong, 2: Once)"))
+    /* Params */ (2, PARAM_NUMBER, "Animation index (0-255, 0: Default)", PARAM_NUMBER,
+                  "Mode (0: Loop, 1: Ping-Pong, 2: Once)"))
 {
     unsigned char i = (unsigned char)intParam();
     int value = intParam();
@@ -634,9 +631,9 @@ ACTION(
     /* ID */ 33,
     /* Name */ "Set animation %0 order to %1",
     /* Flags */ 0,
-    /* Params */ (2, PARAM_NUMBER, "Animation index (0-255, 0: Default)",
-                  PARAM_NUMBER, "Order (0: Row-major (Rows first), 1: "
-                                "Column-major (Columns first)"))
+    /* Params */ (2, PARAM_NUMBER, "Animation index (0-255, 0: Default)", PARAM_NUMBER,
+                  "Order (0: Row-major (Rows first), 1: "
+                  "Column-major (Columns first)"))
 {
     unsigned char i = (unsigned char)intParam();
     int value = intParam();
@@ -671,9 +668,8 @@ ACTION(
     /* ID */ 36,
     /* Name */ "Set zoom origin to (%0, %1)",
     /* Flags */ 0,
-    /* Params */ (2, PARAM_NUMBER,
-                  "Zoom X origin (0: Left, 0.5: Center, 1: Right)", PARAM_NUMBER,
-                  "Zoom Y origin (0: Top, 0.5: Center, 1: Bottom)"))
+    /* Params */ (2, PARAM_NUMBER, "Zoom X origin (0: Left, 0.5: Center, 1: Right)",
+                  PARAM_NUMBER, "Zoom Y origin (0: Top, 0.5: Center, 1: Bottom)"))
 {
     rdPtr->zoomPointX = fltParam();
     rdPtr->zoomPointY = fltParam();
@@ -756,8 +752,7 @@ EXPRESSION(
     /* ID */ 6,
     /* Name */ "Screen2LayerX(",
     /* Flags */ 0,
-    /* Params */ (2, EXPPARAM_NUMBER, "Layer index", EXPPARAM_NUMBER,
-                  "On-screen X"))
+    /* Params */ (2, EXPPARAM_NUMBER, "Layer index", EXPPARAM_NUMBER, "On-screen X"))
 {
     unsigned layerIndex = ExParam(TYPE_INT);
     int screen = ExParam(TYPE_INT);
@@ -781,8 +776,7 @@ EXPRESSION(
     /* ID */ 7,
     /* Name */ "Screen2LayerY(",
     /* Flags */ 0,
-    /* Params */ (2, EXPPARAM_NUMBER, "Layer index", EXPPARAM_NUMBER,
-                  "On-screen Y"))
+    /* Params */ (2, EXPPARAM_NUMBER, "Layer index", EXPPARAM_NUMBER, "On-screen Y"))
 {
     unsigned layerIndex = ExParam(TYPE_INT);
     int screen = ExParam(TYPE_INT);

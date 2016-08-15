@@ -34,18 +34,16 @@ PropData_Group(PROPID_GRP_DISPLAY, (int)"Display", (int)""),
     PropData_CheckBox(
         PROPID_TRANSPARENT, (int)"Transparent",
         (int)"Use with caution - a background may greatly increase the FPS."),
-    PropData_CheckBox(
-        PROPID_RESAMPLE, (int)"Resample tiles",
-        (int)"Applies to zooming and tile scaling/rotating at runtime."),
+    PropData_CheckBox(PROPID_RESAMPLE, (int)"Resample tiles",
+                      (int)"Applies to zooming and tile scaling/rotating at runtime."),
     PropData_CheckBox(PROPID_ACCURATECLIP, (int)"Accurate clipping",
                       (int)"Enable accurate clipping of tiles on the border "
                            "of the viewport area. "
                            "Disabling may increase FPS. If your viewport "
                            "covers the whole screen, "
                            "you can safely turn this off."),
-    PropData_CheckBox(
-        PROPID_AUTOSCROLL, (int)"Follow MMF camera",
-        (int)"The Tile Map automatically follows the MMF camera."),
+    PropData_CheckBox(PROPID_AUTOSCROLL, (int)"Follow MMF camera",
+                      (int)"The Tile Map automatically follows the MMF camera."),
     PropData_ComboBox(PROPID_ANIMMODE, (int)"Animation mode",
                       (int)"Determines how the animation time is computed. 0: "
                            "User-specified (via "
@@ -74,9 +72,8 @@ PropData_Group(PROPID_GRP_DISPLAY, (int)"Display", (int)""),
 
     PROPS_DATA_END()
 
-        PropData BgColor[] = {
-            PropData_Color(PROPID_BGCOLOR, (int)"Background color", (int)""),
-            PropData_End()};
+        PropData BgColor[] = {PropData_Color(PROPID_BGCOLOR, (int)"Background color", (int)""),
+                              PropData_End()};
 
 // PropData TranspColor[] =
 //{
@@ -406,8 +403,7 @@ DWORD WINAPI DLLExport GetTextCaps(mv _far * mV, LPEDATA edPtr)
 // compatibility reasons only.
 //
 
-BOOL WINAPI DLLExport GetTextFont(mv _far * mV, LPEDATA edPtr, LPLOGFONT plf,
-                                  LPSTR pStyle, UINT cbSize)
+BOOL WINAPI DLLExport GetTextFont(mv _far * mV, LPEDATA edPtr, LPLOGFONT plf, LPSTR pStyle, UINT cbSize)
 {
 #if !RUN_ONLY
 // Example: copy LOGFONT structure from EDITDATA
@@ -757,8 +753,8 @@ void WINAPI DLLExport GetObjectRect(mv _far * mV, RECT FAR * rc, fpLevObj loPtr,
 // file.
 //
 
-void WINAPI DLLExport EditorDisplay(mv _far * mV, fpObjInfo oiPtr,
-                                    fpLevObj loPtr, LPEDATA edPtr, RECT FAR * rc)
+void WINAPI DLLExport EditorDisplay(mv _far * mV, fpObjInfo oiPtr, fpLevObj loPtr,
+                                    LPEDATA edPtr, RECT FAR * rc)
 {
 #ifndef RUN_ONLY
 
@@ -780,8 +776,7 @@ void WINAPI DLLExport EditorDisplay(mv _far * mV, fpObjInfo oiPtr,
 
         // Draw opaque background
         if (!edPtr->transparent)
-            ps->Rectangle(rc->left, rc->top, rc->right, rc->bottom,
-                          edPtr->background, 0, 0, 1);
+            ps->Rectangle(rc->left, rc->top, rc->right, rc->bottom, edPtr->background, 0, 0, 1);
 
         //// For each tile
         // if (edPtr->tileWidth > 0 && edPtr->tileHeight > 0)
@@ -965,8 +960,7 @@ void menucpy(HMENU hTargetMenu, HMENU hSourceMenu)
         else {
             GetMenuString(hSourceMenu, n, strBuf, 80, MF_BYPOSITION);
             if (id != -1)
-                AppendMenu(hTargetMenu,
-                           GetMenuState(hSourceMenu, n, MF_BYPOSITION), id, strBuf);
+                AppendMenu(hTargetMenu, GetMenuState(hSourceMenu, n, MF_BYPOSITION), id, strBuf);
             else {
                 hSubMenu = CreatePopupMenu();
                 AppendMenu(hTargetMenu, MF_POPUP | MF_STRING, (uint)hSubMenu, strBuf);
@@ -1057,8 +1051,7 @@ HMENU WINAPI DLLExport GetExpressionMenu(mv _far * mV, fpObjInfo oiPtr, LPEDATA 
 //
 
 #ifndef RUN_ONLY
-void GetCodeTitle(LPEVENTINFOS2 eiPtr, short code, short param, short mn,
-                  LPSTR strBuf, WORD maxLen)
+void GetCodeTitle(LPEVENTINFOS2 eiPtr, short code, short param, short mn, LPSTR strBuf, WORD maxLen)
 {
     HMENU hMn;
 
@@ -1101,13 +1094,11 @@ void GetCodeTitle(LPEVENTINFOS2 eiPtr, short code, short param, short mn,
 #define GetCodeTitle(a, b, c, d, e, f)
 #endif // !RUN_ONLY
 
-void WINAPI DLLExport GetConditionTitle(mv _far * mV, short code, short param,
-                                        LPSTR strBuf, short maxLen)
+void WINAPI DLLExport GetConditionTitle(mv _far * mV, short code, short param, LPSTR strBuf, short maxLen)
 {
     GetCodeTitle((LPEVENTINFOS2)conditionsInfos, code, param, MN_CONDITIONS, strBuf, maxLen);
 }
-void WINAPI DLLExport GetActionTitle(mv _far * mV, short code, short param,
-                                     LPSTR strBuf, short maxLen)
+void WINAPI DLLExport GetActionTitle(mv _far * mV, short code, short param, LPSTR strBuf, short maxLen)
 {
     GetCodeTitle((LPEVENTINFOS2)actionsInfos, code, param, MN_ACTIONS, strBuf, maxLen);
 }
@@ -1143,8 +1134,7 @@ short WINAPI DLLExport GetActionCodeFromMenu(mv _far * mV, short menuId)
     LPEVENTINFOS2 eiPtr;
     int n;
 
-    for (n = Actions.size(), eiPtr = (LPEVENTINFOS2)actionsInfos;
-         n > 0 && eiPtr->menu != menuId; n--)
+    for (n = Actions.size(), eiPtr = (LPEVENTINFOS2)actionsInfos; n > 0 && eiPtr->menu != menuId; n--)
         eiPtr = EVINFO2_NEXT(eiPtr);
     if (n > 0)
         return eiPtr->infos.code;
@@ -1237,8 +1227,7 @@ void WINAPI DLLExport GetExpressionString(mv _far * mV, short code, LPSTR strPtr
 // Returns the parameter name to display in the expression editor
 //
 
-void WINAPI DLLExport GetExpressionParam(mv _far * mV, short code, short param,
-                                         LPSTR strBuf, short maxLen)
+void WINAPI DLLExport GetExpressionParam(mv _far * mV, short code, short param, LPSTR strBuf, short maxLen)
 {
 #ifndef RUN_ONLY
     if (strlen(Expressions[code]->getParamName(param)))
@@ -1340,8 +1329,7 @@ void WINAPI EditParameter(mv _far * mV, short code, paramExt * pExt)
 // Initialize the parameter.
 //
 
-void WINAPI GetParameterString(mv _far * mV, short code, paramExt * pExt,
-                               LPSTR pDest, short size)
+void WINAPI GetParameterString(mv _far * mV, short code, paramExt * pExt, LPSTR pDest, short size)
 {
 #if !RUN_ONLY
 

@@ -2,11 +2,9 @@
 
 object * GetSingleInstace(LPRDATA rdPtr, short Oi)
 {
-    LPRH rhPtr =
-        rdPtr->rHo.hoAdRunHeader; // get a pointer to the mmf runtime header
-    LPOBL ObjectList =
-        rhPtr->rhObjectList;        // get a pointer to the mmf object list
-    LPOIL OiList = rhPtr->rhOiList; // get a pointer to the mmf object info list
+    LPRH rhPtr = rdPtr->rHo.hoAdRunHeader;  // get a pointer to the mmf runtime header
+    LPOBL ObjectList = rhPtr->rhObjectList; // get a pointer to the mmf object list
+    LPOIL OiList = rhPtr->rhOiList;         // get a pointer to the mmf object info list
     LPQOI QualToOiList =
         rhPtr->rhQualToOiList; // get a pointer to the mmf qualifier to Oi list
 
@@ -20,7 +18,10 @@ object * GetSingleInstace(LPRDATA rdPtr, short Oi)
         CurrentOi = GetOILPtr(OiList, Oi);
     }
     if (CurrentOi) {
-        bool prevSelected = (CurrentOi->oilEventCount == rhPtr->rh2.rh2EventCount); // find out if conditions have selected any objects yet
+        bool prevSelected =
+            (CurrentOi->oilEventCount ==
+             rhPtr->rh2
+                 .rh2EventCount); // find out if conditions have selected any objects yet
         if (prevSelected &&
             CurrentOi->oilNumOfSelected <=
                 0) // if "0" have been selected (blame qualifiers) then return
@@ -49,11 +50,9 @@ bool FilterObjects(LPRDATA rdPtr, short Oi, bool (*filterFunction)(LPRDATA, LPRO
                    void * userdata, bool is_negated)
 {
 
-    LPRH rhPtr =
-        rdPtr->rHo.hoAdRunHeader; // get a pointer to the mmf runtime header
-    LPOBL ObjectList =
-        rhPtr->rhObjectList;        // get a pointer to the mmf object list
-    LPOIL OiList = rhPtr->rhOiList; // get a pointer to the mmf object info list
+    LPRH rhPtr = rdPtr->rHo.hoAdRunHeader;  // get a pointer to the mmf runtime header
+    LPOBL ObjectList = rhPtr->rhObjectList; // get a pointer to the mmf object list
+    LPOIL OiList = rhPtr->rhOiList;         // get a pointer to the mmf object info list
     LPQOI QualToOiList =
         rhPtr->rhQualToOiList; // get a pointer to the mmf qualifier to Oi list
 
@@ -69,11 +68,11 @@ bool FilterObjects(LPRDATA rdPtr, short Oi, bool (*filterFunction)(LPRDATA, LPRO
         // Loop through all objects associated with this qualifier
         for (CurrentQualToOi; CurrentQualToOi->qoiOiList >= 0;
              CurrentQualToOi = PtrAddBytes(CurrentQualToOi, 4)) {
-            LPOIL CurrentOi = GetOILPtr(OiList, CurrentQualToOi->qoiOiList); // get a pointer to the
+            LPOIL CurrentOi =
+                GetOILPtr(OiList, CurrentQualToOi->qoiOiList); // get a pointer to the
             // objectInfo for this
             // object in the qualifier
-            if (CurrentOi->oilNObjects <=
-                0) // skip if there are none of the object
+            if (CurrentOi->oilNObjects <= 0) // skip if there are none of the object
                 continue;
 
             bool prevSelected = (CurrentOi->oilEventCount == rhPtr->rh2.rh2EventCount); // find out if conditions have
@@ -96,13 +95,14 @@ bool FilterObjects(LPRDATA rdPtr, short Oi, bool (*filterFunction)(LPRDATA, LPRO
                 iCount = CurrentOi->oilNObjects;
                 CurrentOi->oilEventCount =
                     rhPtr->rh2.rh2EventCount; // tell mmf that the object
-                                              // selection is relevant to this
-                                              // event
+                // selection is relevant to this
+                // event
             }
             for (int i = 0; i < iCount; i++) {
                 if (is_negated ^ filterFunction(rdPtr, (LPRO)CurrentObject, userdata)) {
                     if (numSelected++ == 0) {
-                        CurrentOi->oilListSelected = CurrentObject->hoNumber; // select the first object
+                        CurrentOi->oilListSelected =
+                            CurrentObject->hoNumber; // select the first object
                     }
                     else {
                         PrevSelected->hoNextSelected = CurrentObject->hoNumber;
@@ -113,8 +113,7 @@ bool FilterObjects(LPRDATA rdPtr, short Oi, bool (*filterFunction)(LPRDATA, LPRO
 
                 if (prevSelected) {
                     if (CurrentObject->hoNextSelected >= 0) {
-                        CurrentObject =
-                            ObjectList[CurrentObject->hoNextSelected].oblOffset;
+                        CurrentObject = ObjectList[CurrentObject->hoNextSelected].oblOffset;
                     }
                     else {
                         break;
@@ -143,13 +142,14 @@ bool FilterObjects(LPRDATA rdPtr, short Oi, bool (*filterFunction)(LPRDATA, LPRO
         return bSelected ^ is_negated;
     }
     else {
-        LPOIL CurrentOi = GetOILPtr(
-            OiList, Oi); // get a pointer to the objectInfo for this object
-        if (CurrentOi->oilNObjects <=
-            0) // return if there are none of the object
+        LPOIL CurrentOi =
+            GetOILPtr(OiList, Oi); // get a pointer to the objectInfo for this object
+        if (CurrentOi->oilNObjects <= 0) // return if there are none of the object
             return false ^ is_negated;
 
-        bool prevSelected = (CurrentOi->oilEventCount == rhPtr->rh2.rh2EventCount); // find out if conditions have selected
+        bool prevSelected =
+            (CurrentOi->oilEventCount ==
+             rhPtr->rh2.rh2EventCount); // find out if conditions have selected
         // any objects yet
         if (prevSelected &&
             CurrentOi->oilNumOfSelected <=

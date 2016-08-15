@@ -289,10 +289,7 @@ short WINAPI DLLExport ContinueRunObject(LPRDATA rdPtr)
 // Called when the application starts or restarts.
 // Useful for storing global data
 //
-void WINAPI DLLExport StartApp(mv _far * mV, CRunApp * pApp)
-{
-    InitOiListItemSize(mV);
-}
+void WINAPI DLLExport StartApp(mv _far * mV, CRunApp * pApp) { InitOiListItemSize(mV); }
 
 // -------------------
 // EndApp
@@ -317,18 +314,14 @@ void WINAPI DLLExport EndApp(mv _far * mV, CRunApp * pApp)
 // -------------------
 // Called when the frame starts or restarts.
 //
-void WINAPI DLLExport StartFrame(mv _far * mV, DWORD dwReserved, int nFrameIndex)
-{
-}
+void WINAPI DLLExport StartFrame(mv _far * mV, DWORD dwReserved, int nFrameIndex) {}
 
 // -------------------
 // EndFrame
 // -------------------
 // Called when the frame ends.
 //
-void WINAPI DLLExport EndFrame(mv _far * mV, DWORD dwReserved, int nFrameIndex)
-{
-}
+void WINAPI DLLExport EndFrame(mv _far * mV, DWORD dwReserved, int nFrameIndex) {}
 
 // ============================================================================
 //

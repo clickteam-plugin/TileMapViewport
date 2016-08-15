@@ -1,24 +1,23 @@
 #include "Common.h"
 #include "Helpers.h"
 
-#define assignSubLayerSettingLink(name, minCellSize)                           \
+#define assignSubLayerSettingLink(name, minCellSize)                                     \
     assignSubLayerLink(layer.settings.subLayerLink, name, minCellSize)
 
-#define assignSubLayerCallbackLink(name, minCellSize)                          \
+#define assignSubLayerCallbackLink(name, minCellSize)                                    \
     assignSubLayerLink(rdPtr->layerCallback.link, name, minCellSize)
 
-#define assignSubLayerLink(source, name, minCellSize)                          \
-    {                                                                          \
-        if (source.##name != 0xff && source.##name < layer.subLayers.size() && \
-            layer.subLayers[source.##name].getCellSize() >= minCellSize) {     \
-            sl_##name = &layer.subLayers[source.##name];                       \
-        }                                                                      \
+#define assignSubLayerLink(source, name, minCellSize)                                    \
+    {                                                                                    \
+        if (source.##name != 0xff && source.##name < layer.subLayers.size() &&           \
+            layer.subLayers[source.##name].getCellSize() >= minCellSize) {               \
+            sl_##name = &layer.subLayers[source.##name];                                 \
+        }                                                                                \
     }
 
 // Clips a row of tiles rendered onto a viewport to render only within the
 // viewport boundaries
-inline void clipBlitTiles(int & destPos, int viewportSize, int & srcPos,
-                          int & srcSize, int tileSize)
+inline void clipBlitTiles(int & destPos, int viewportSize, int & srcPos, int & srcSize, int tileSize)
 {
     srcSize = tileSize;
 
@@ -67,11 +66,12 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
     // Clear background
     if (!rdPtr->transparent) {
-        if (tempSurf)
+        if (tempSurf) {
             target->Fill(rdPtr->background);
-        else
-            target->Fill(viewportX, viewportY, viewportWidth, viewportHeight,
-                         rdPtr->background);
+        }
+        else {
+            target->Fill(viewportX, viewportY, viewportWidth, viewportHeight, rdPtr->background);
+        }
     }
 
     if (rdPtr->autoScroll) {
@@ -106,8 +106,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
             LayerSettings settings = layer.settings;
 
             // Sub-layer links (assigned via callback)
-            SubLayer *sl_tileset = 0, *sl_scaleX = 0, *sl_scaleY = 0,
-                     *sl_angle = 0, *sl_animation = 0, *sl_animationFrame = 0;
+            SubLayer *sl_tileset = 0, *sl_scaleX = 0, *sl_scaleY = 0, *sl_angle = 0,
+                     *sl_animation = 0, *sl_animationFrame = 0;
 
             // If necessary, load the sub-layers for per-tile render info
             assignSubLayerSettingLink(tileset, 1);
@@ -120,8 +120,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
                 rdPtr->layerCallback.settings = &settings;
 
                 // Reset layer links
-                memset(&rdPtr->layerCallback.link, 0xff,
-                       sizeof(rdPtr->layerCallback.link));
+                memset(&rdPtr->layerCallback.link, 0xff, sizeof(rdPtr->layerCallback.link));
 
                 // Perform callback
                 generateEvent(3);
@@ -169,10 +168,9 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
             drawY = (drawY - viewportYBias) * zoom + viewportYBias;
 
             // See if the layer is visible at all
-            if ((!settings.wrapX && (drawX >= viewportWidth ||
-                                     drawX + renderTileWidth * layerWidth < 0)) ||
-                (!settings.wrapY && (drawY >= viewportHeight ||
-                                     drawY + renderTileHeight * layerHeight < 0)))
+            if ((!settings.wrapX && (drawX >= viewportWidth || drawX + renderTileWidth * layerWidth < 0)) ||
+                (!settings.wrapY &&
+                 (drawY >= viewportHeight || drawY + renderTileHeight * layerHeight < 0)))
                 continue;
 
             // Region to draw
@@ -358,48 +356,39 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
                                 tileSettings.transform = true;
 
                             // HWA only: tile angle and scale on callback.
-                            // Disables accurate
-                            // clipping!
+                            // Disables accurate clipping!
                             if (tileSettings.transform) {
                                 float scaleX = zoom * tileSettings.scaleX;
                                 float scaleY = zoom * tileSettings.scaleY;
                                 float angle = tileSettings.angle * 360.0f;
 
-                                float blitX =
-                                    drawX +
-                                    (screenX - drawX + offsetX + tileCenter.x) * zoom;
-                                float blitY =
-                                    drawY +
-                                    (screenY - drawY + offsetY + tileCenter.y) * zoom;
+                                float blitX, blitY;
+                                blitX = drawX + (screenX - drawX + offsetX + tileCenter.x) * zoom;
+                                blitY = drawY + (screenY - drawY + offsetY + tileCenter.y) * zoom;
 
-                                tileSurf->BlitEx(*target, blitX, blitY, scaleX,
-                                                 scaleY, tile.x * tileWidth,
-                                                 tile.y * tileHeight, tileWidth, tileHeight,
-                                                 &tileCenter, angle, BMODE_TRANSP,
-                                                 blitOp, blitParam, blitFlags);
+                                tileSurf->BlitEx(*target, blitX, blitY, scaleX, scaleY,
+                                                 tile.x * tileWidth, tile.y * tileHeight,
+                                                 tileWidth, tileHeight, &tileCenter, angle,
+                                                 BMODE_TRANSP, blitOp, blitParam, blitFlags);
                                 break;
                             }
 #endif
 
-                            // Blit from the surface of the tileset with the
-                            // tile's index in the
-                            // layer tilesets
+                            // Blit from the surface of the tileset with the tile's index in the layer tilesets
                             if (!clip) {
-                                tileSurf->Blit(*target, screenX + offsetX, screenY + offsetY,
-                                               (tile.x) * tileWidth, tile.y * tileHeight,
-                                               tileWidth, tileHeight, BMODE_TRANSP,
-                                               blitOp, blitParam, blitFlags);
+                                tileSurf->Blit(*target, screenX + offsetX,
+                                               screenY + offsetY, (tile.x) * tileWidth,
+                                               tile.y * tileHeight, tileWidth, tileHeight,
+                                               BMODE_TRANSP, blitOp, blitParam, blitFlags);
                             }
 
-                            // Before blitting, perform clipping so that we
-                            // won't draw outside of
-                            // the viewport...
+                            // Before blitting, perform clipping so that we won't draw outside of the viewport...
                             else {
 
-                                tileSurf->Blit(*target, screenX + offsetX, screenY + offsetY,
-                                               tile.x * tileWidth, tile.y * tileHeight,
-                                               tileWidth, tileHeight, BMODE_TRANSP,
-                                               blitOp, blitParam, blitFlags);
+                                tileSurf->Blit(*target, screenX + offsetX,
+                                               screenY + offsetY, tile.x * tileWidth,
+                                               tile.y * tileHeight, tileWidth, tileHeight,
+                                               BMODE_TRANSP, blitOp, blitParam, blitFlags);
 
                                 int dX, dY, sX, sY, sW, sH;
                                 dX = screenX + offsetX - viewportX;
@@ -411,14 +400,13 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
                                 clipBlitTiles(dY, viewportHeight, sY, sH, tileHeight);
 
                                 // Draw if still visible
-                                if (dX < viewportWidth && dY < viewportHeight &&
-                                    sW > 0 && sH > 0) {
+                                if (dX < viewportWidth && dY < viewportHeight && sW > 0 && sH > 0) {
                                     // Apply viewport position
                                     dX += viewportX;
                                     dY += viewportY;
 
-                                    tileSurf->Blit(*target, dX, dY, sX, sY, sW, sH, BMODE_TRANSP,
-                                                   blitOp, blitParam, blitFlags);
+                                    tileSurf->Blit(*target, dX, dY, sX, sY, sW, sH,
+                                                   BMODE_TRANSP, blitOp, blitParam, blitFlags);
                                 }
                             }
                         } while (0);
@@ -437,8 +425,7 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
     // Finish up
     if (tempSurf) {
         rdPtr->surface->Blit(*ps, viewportX, viewportY, BMODE_OPAQUE,
-                             BlitOp(rdPtr->rs.rsEffect & EFFECT_MASK),
-                             rdPtr->rs.rsEffectParam, 0);
+                             BlitOp(rdPtr->rs.rsEffect & EFFECT_MASK), rdPtr->rs.rsEffectParam, 0);
     }
 
     // Update window region
