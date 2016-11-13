@@ -13,7 +13,10 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
 
     // Store some frequently used values
     const float zoom = rdPtr->zoomColl ? rdPtr->zoom : 1.0f;
-
+    float zoomPointX = rdPtr->zoomPointX;
+    float zoomPointY = rdPtr->zoomPointY;
+    int viewportWidth = rdPtr->rHo.hoImgWidth;
+    int viewportHeight = rdPtr->rHo.hoImgHeight;
     int tileWidth = layer.settings.tileWidth;
     int tileHeight = layer.settings.tileHeight;
     float renderTileWidth = tileWidth * zoom;
@@ -23,9 +26,17 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
     int layerPxWidth = layerWidth * renderTileWidth;
     int layerPxHeight = layerHeight * renderTileHeight;
 
-    // Compute layer position on screen
-    int layerX = layer.getScreenX(rdPtr->cameraX) + rdPtr->rHo.hoRect.left;
-    int layerY = layer.getScreenY(rdPtr->cameraY) + rdPtr->rHo.hoRect.top;
+    // On-screen coordinate
+    float drawX = layer.getScreenX(rdPtr->cameraX);
+    float drawY = layer.getScreenY(rdPtr->cameraY);
+
+    float viewportXBias = viewportWidth * zoomPointX;
+    float viewportYBias = viewportHeight * zoomPointY;
+    drawX = (drawX - viewportXBias) * zoom + viewportXBias;
+    drawY = (drawY - viewportYBias) * zoom + viewportYBias;
+
+    int layerX = drawX + rdPtr->rHo.hoRect.left;
+    int layerY = drawY + rdPtr->rHo.hoRect.top;
 
     // Not overlapping visible part, exit
     if (!rdPtr->outsideColl) {
@@ -203,8 +214,8 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
                     if (alpha) {
                         cSurface * alphaSurf = rdPtr->cndAlphaSurf;
 
-                        for (int iX = intersect.x1; iX < intersect.x2; ++iX)
-                            for (int iY = intersect.y1; iY < intersect.y2; ++iY)
+                        for (int iY = intersect.y1; iY <= intersect.y2; ++iY)
+                            for (int iX = intersect.x1; iX <= intersect.x2; ++iX)
                                 if (alphaSurf->GetPixelFast8(iX, iY) > 0)
                                     return true;
                     }
@@ -212,11 +223,13 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
                     else {
                         COLORREF transpCol = surface->GetTransparentColor();
 
-                        for (int iX = intersect.x1; iX < intersect.x2; ++iX)
-                            for (int iY = intersect.y1; iY < intersect.y2; ++iY)
+                        for (int iY = intersect.y1; iY <= intersect.y2; ++iY)
+                            for (int iX = intersect.x1; iX <= intersect.x2; ++iX)
                                 if (surface->GetPixelFast(iX, iY) != transpCol)
                                     return true;
                     }
+
+                    //printf("POST %d, %d\n", intersect.x2 - intersect.x1, intersect.y2 - intersect.y1);
                 }
             }
         }

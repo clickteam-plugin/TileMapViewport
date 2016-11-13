@@ -23,7 +23,7 @@ bool cndObjOverlapsLayer(LPRDATA rdPtr, LPRO runObj, void * userdata)
     rect.x2 = rect.x1 + runObj->roHo.hoImgWidth;
     rect.y1 = runObj->roHo.hoY - runObj->roHo.hoImgYSpot;
     rect.y2 = rect.y1 + runObj->roHo.hoImgHeight;
-    return (long)checkRectangleOverlap(rdPtr, *rdPtr->cndLayer, *rdPtr->cndTileset, rect);
+    return checkRectangleOverlap(rdPtr, *rdPtr->cndLayer, *rdPtr->cndTileset, rect);
 }
 
 CONDITION(
@@ -250,8 +250,8 @@ ACTION(
     /* Flags */ 0,
     /* Params */ (2, PARAM_NUMBER, "Scroll X", PARAM_NUMBER, "Scroll Y"))
 {
-    rdPtr->cameraX = intParam();
-    rdPtr->cameraY = intParam();
+    rdPtr->cameraX = fltParam();
+    rdPtr->cameraY = fltParam();
     rdPtr->rc.rcChanged = true;
 }
 
@@ -655,10 +655,10 @@ ACTION(
     /* ID */ 35,
     /* Name */ "Set zoom to %0",
     /* Flags */ 0,
-    /* Params */ (1, PARAM_NUMBER, "Zoom (1.0: 100%)"))
+    /* Params */ (1, PARAM_NUMBER, "Zoom (1.0: 100%%)"))
 {
     rdPtr->zoom = fltParam();
-    rdPtr->zoom = max(0.05f, rdPtr->zoom);
+    rdPtr->zoom = max(0.1f, rdPtr->zoom);
     if (rdPtr->zoom >= 0.999f && rdPtr->zoom <= 1.001f)
         rdPtr->zoom = 1.0f;
     rdPtr->rc.rcChanged = true;

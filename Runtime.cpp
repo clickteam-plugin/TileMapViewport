@@ -149,6 +149,13 @@ short WINAPI DLLExport DestroyRunObject(LPRDATA rdPtr, long fast)
 //
 short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 {
+    // TODO this needs to be done in DisplayRunObject to not lag behind,
+    // but that won't be called for invisible viewports
+    if (rdPtr->autoScroll) {
+        rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
+        rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
+    }
+
     // Update animation timer
     if (rdPtr->animMode == 1) {
         DWORD tick = GetTickCount();

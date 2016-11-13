@@ -35,6 +35,11 @@ inline void clipBlitTiles(int & destPos, int viewportSize, int & srcPos, int & s
 
 short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 {
+    if (rdPtr->autoScroll) {
+        rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
+        rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
+    }
+
     // No attached parent... nothing to draw...
     if (!rdPtr->p)
         return 0;
@@ -72,11 +77,6 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
         else {
             target->Fill(viewportX, viewportY, viewportWidth, viewportHeight, rdPtr->background);
         }
-    }
-
-    if (rdPtr->autoScroll) {
-        rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
-        rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
     }
 
     double time = rdPtr->animTime;
@@ -187,9 +187,9 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
             // Optimize drawing region
             while (drawX <= -pixelBorderX)
-                drawX += (int)renderTileWidth, x1++;
+                drawX += renderTileWidth, x1++;
             while (drawY <= -pixelBorderY)
-                drawY += (int)renderTileHeight, y1++;
+                drawY += renderTileHeight, y1++;
             while (drawX >= viewportWidth + pixelBorderX - (x2 - x1) * renderTileWidth)
                 x2--;
             while (drawY >= viewportHeight + pixelBorderY - (y2 - y1) * renderTileWidth)
@@ -247,9 +247,9 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
                 int offsetX = 0, offsetY = 0;
 
                 // For every visible tile...
-                int screenY = (int)drawY;
+                int screenY = 0;
                 for (int unwrappedY = y1; unwrappedY < y2; ++unwrappedY) {
-                    int screenX = (int)drawX;
+                    int screenX = 0;
                     for (int unwrappedX = x1; unwrappedX < x2; ++unwrappedX) {
                         // Calculate wrapped coordinate (in case wrapping is
                         // enabled)
@@ -363,8 +363,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
                                 float angle = tileSettings.angle * 360.0f;
 
                                 float blitX, blitY;
-                                blitX = drawX + (screenX - drawX + offsetX + tileCenter.x) * zoom;
-                                blitY = drawY + (screenY - drawY + offsetY + tileCenter.y) * zoom;
+                                blitX = drawX + (screenX + offsetX + tileCenter.x) * zoom;
+                                blitY = drawY + (screenY + offsetY + tileCenter.y) * zoom;
 
                                 tileSurf->BlitEx(*target, blitX, blitY, scaleX, scaleY,
                                                  tile.x * tileWidth, tile.y * tileHeight,
@@ -376,8 +376,8 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 
                             // Blit from the surface of the tileset with the tile's index in the layer tilesets
                             if (!clip) {
-                                tileSurf->Blit(*target, screenX + offsetX,
-                                               screenY + offsetY, (tile.x) * tileWidth,
+                                tileSurf->Blit(*target, (int)drawX + screenX + offsetX,
+                                               (int)drawY + screenY + offsetY, (tile.x) * tileWidth,
                                                tile.y * tileHeight, tileWidth, tileHeight,
                                                BMODE_TRANSP, blitOp, blitParam, blitFlags);
                             }
@@ -385,14 +385,14 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
                             // Before blitting, perform clipping so that we won't draw outside of the viewport...
                             else {
 
-                                tileSurf->Blit(*target, screenX + offsetX,
-                                               screenY + offsetY, tile.x * tileWidth,
+                                tileSurf->Blit(*target, (int)drawX + screenX + offsetX,
+                                               (int)drawY + screenY + offsetY, tile.x * tileWidth,
                                                tile.y * tileHeight, tileWidth, tileHeight,
                                                BMODE_TRANSP, blitOp, blitParam, blitFlags);
 
                                 int dX, dY, sX, sY, sW, sH;
-                                dX = screenX + offsetX - viewportX;
-                                dY = screenY + offsetY - viewportY;
+                                dX = (int)drawX + screenX + offsetX - viewportX;
+                                dY = (int)drawY + screenY + offsetY - viewportY;
                                 sX = tile.x * tileWidth;
                                 sY = tile.y * tileHeight;
 
