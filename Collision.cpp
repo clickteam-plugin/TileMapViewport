@@ -199,8 +199,8 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
                     Rect intersect;
                     intersect.x1 = max(rect.x1, tileBounds.x1) - tileBounds.x1 + tilesetX;
                     intersect.y1 = max(rect.y1, tileBounds.y1) - tileBounds.y1 + tilesetY;
-                    intersect.x2 = min(rect.x2, tileBounds.x2) - tileBounds.x1 + tilesetX;
-                    intersect.y2 = min(rect.y2, tileBounds.y2) - tileBounds.y1 + tilesetY;
+                    intersect.x2 = min(rect.x2 - 1, tileBounds.x2) - tileBounds.x1 + tilesetX;
+                    intersect.y2 = min(rect.y2 - 1, tileBounds.y2) - tileBounds.y1 + tilesetY;
 
                     intersect.x1 /= zoom;
                     intersect.y1 /= zoom;
