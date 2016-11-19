@@ -66,14 +66,6 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
 
     // Until there are no more rectangles to check...
     while (rectCount--) {
-        // This should NEVER EVER happen, so if it really does, make the user
-        // report this issue
-        // immediately.
-        if (rectCount > RECT_MAX)
-            MessageBox(0, "Tile Map has a problem. Please post this in the "
-                          "forum thread.",
-                       "Rectangle stack overflow!", 0);
-
         // Get the most important rectangle
         rect = rectStack[rectCount];
 
@@ -92,11 +84,6 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
                     split2 = rect;
                     split2.x1 = split1.x2 + 1;
                 }
-
-                // Fail-safe: Modulo again. From what I know, this is
-                // unnecessary.
-                // signmodPair(split1.x1, split1.x2, 0, layerPxWidth);
-                // signmodPair(split2.x1, split2.x2, 0, layerPxWidth);
             }
         }
         if (layer.settings.wrapY) {
@@ -126,7 +113,9 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
         int x2 = floordiv<float>(rect.x2 - 1, renderTileWidth);
         int y2 = floordiv<float>(rect.y2 - 1, renderTileHeight);
 
-        // Limit candidates to possibly existing tiles
+        if (x2 < 0 || y2 < 0 || x1 >= layerWidth || y1 >= layerHeight)
+            continue;
+
         x1 = max(0, min(x1, layerWidth - 1));
         x2 = max(0, min(x2, layerWidth - 1));
         y1 = max(0, min(y1, layerHeight - 1));
@@ -181,7 +170,7 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
                         continue;
 
                     // Bounding box collisions - we're done
-                    if (!fineColl)
+                    if (!fineColl || zoom < 0.1f)
                         return true;
 
                     // Get bounding box of tile
@@ -199,8 +188,8 @@ bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect
                     Rect intersect;
                     intersect.x1 = max(rect.x1, tileBounds.x1) - tileBounds.x1 + tilesetX;
                     intersect.y1 = max(rect.y1, tileBounds.y1) - tileBounds.y1 + tilesetY;
-                    intersect.x2 = min(rect.x2 - 1, tileBounds.x2) - tileBounds.x1 + tilesetX;
-                    intersect.y2 = min(rect.y2 - 1, tileBounds.y2) - tileBounds.y1 + tilesetY;
+                    intersect.x2 = min(rect.x2 - 1, tileBounds.x2 - 1) - tileBounds.x1 + tilesetX;
+                    intersect.y2 = min(rect.y2 - 1, tileBounds.y2 - 1) - tileBounds.y1 + tilesetY;
 
                     intersect.x1 /= zoom;
                     intersect.y1 /= zoom;
@@ -317,12 +306,3 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer & layer, Tileset & tileset, int pixelX
 
     return surface->GetPixelFast(tilesetX, tilesetY) != surface->GetTransparentColor();
 }
-
-// UNUSED code that will probably never be reused!
-// if (rdPtr->outsideColl)
-//{
-//	if (layer.settings.wrapX)
-//		signmodPair(rect.x1, rect.x2, split, layerWidth*tileWidth);
-//	if (layer.settings.wrapY)
-//		signmodPair(rect.y1, rect.y2, split, layerHeight*tileHeight);
-//}

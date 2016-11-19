@@ -658,7 +658,7 @@ ACTION(
     /* Params */ (1, PARAM_NUMBER, "Zoom (1.0: 100%%)"))
 {
     rdPtr->zoom = fltParam();
-    rdPtr->zoom = max(0.1f, rdPtr->zoom);
+    rdPtr->zoom = max(0.05f, rdPtr->zoom);
     if (rdPtr->zoom >= 0.999f && rdPtr->zoom <= 1.001f)
         rdPtr->zoom = 1.0f;
     rdPtr->rc.rcChanged = true;
