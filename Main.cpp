@@ -32,6 +32,8 @@ CONDITION(
     /* Flags */ EVFLAGS_ALWAYS | EVFLAGS_NOTABLE,
     /* Params */ (2, PARAM_OBJECT, "Object", PARAM_NUMBER, "Layer index"))
 {
+    MICROPROFILE_SCOPEI("TileMapView", "%o: %0 is overlapping layer %1", MP_AUTO);
+
     PEVT pe = (PEVT)(((LPBYTE)rdPtr->rHo.hoCurrentParam) - CND_SIZE);
     bool isNegated = (pe->evtFlags2 & EVFLAG2_NOT);
     short oi = ((eventParam *)param1)->evp.evpW.evpW0;

@@ -6,6 +6,8 @@
 // given tileset (for pixel-testing)
 bool checkRectangleOverlap(LPRDATA rdPtr, Layer & layer, Tileset & tileset, Rect rect)
 {
+    MICROPROFILE_SCOPEI("TileMapView", "checkRectangleOverlap", MP_AUTO);
+
     if (!rdPtr->p)
         return false;
 

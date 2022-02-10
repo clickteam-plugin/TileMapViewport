@@ -149,6 +149,8 @@ short WINAPI DLLExport DestroyRunObject(LPRDATA rdPtr, long fast)
 //
 short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
 {
+    MICROPROFILE_SCOPEI("TileMapView", "HandleRunObject", MP_AUTO);
+
     // TODO this needs to be done in DisplayRunObject to not lag behind,
     // but that won't be called for invisible viewports
     if (rdPtr->autoScroll) {
@@ -177,6 +179,10 @@ short WINAPI DLLExport HandleRunObject(LPRDATA rdPtr)
     // Unlink if deleted
     if (rdPtr->p && rdPtr->p->rHo.hoFlags & HOF_DESTROYED)
         rdPtr->p = 0;
+
+#ifdef HWABETA
+    return REFLAG_DISPLAY;
+#endif
 
     return rdPtr->rc.rcChanged ? REFLAG_DISPLAY : 0;
 }
@@ -296,7 +302,16 @@ short WINAPI DLLExport ContinueRunObject(LPRDATA rdPtr)
 // Called when the application starts or restarts.
 // Useful for storing global data
 //
-void WINAPI DLLExport StartApp(mv _far * mV, CRunApp * pApp) { InitOiListItemSize(mV); }
+void WINAPI DLLExport StartApp(mv _far * mV, CRunApp * pApp) {
+    InitOiListItemSize(mV);
+
+    MicroProfileOnThreadCreate("Main");
+    printf("press ctrl-c to quit\n");
+
+    //turn on profiling
+    MicroProfileSetEnableAllGroups(true);
+    MicroProfileSetForceMetaCounters(true);
+}
 
 // -------------------
 // EndApp
@@ -314,6 +329,9 @@ void WINAPI DLLExport EndApp(mv _far * mV, CRunApp * pApp)
     //		delete pData;
     //		mV->mvSetExtUserData(pApp, hInstLib, NULL);
     //	}
+
+    MicroProfileShutdown();
+
 }
 
 // -------------------

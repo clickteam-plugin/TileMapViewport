@@ -33,6 +33,8 @@ bool checkPixelSolid(LPRDATA rdPtr, Layer & layer, Tileset & tileset, int pixelX
 #include <d3d9.h>
 #endif
 
+#include "microprofile.h"
+
 // Globals and prototypes
 extern HINSTANCE hInstLib;
 extern short * conditionsInfos;

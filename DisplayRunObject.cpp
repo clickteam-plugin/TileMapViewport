@@ -1,6 +1,12 @@
 #include "Common.h"
 #include "Helpers.h"
 
+#pragma comment(lib, "wsock32.lib")
+
+#ifndef HWABETA
+#error Non-HWA builds no longer supported.
+#endif
+
 #define assignSubLayerSettingLink(name, minCellSize)                                     \
     assignSubLayerLink(layer.settings.subLayerLink, name, minCellSize)
 
@@ -35,6 +41,14 @@ inline void clipBlitTiles(int & destPos, int viewportSize, int & srcPos, int & s
 
 short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
 {
+    struct  Foo {
+        ~Foo() { MicroProfileFlip(nullptr); }
+    };
+
+    Foo foo;
+    
+    MICROPROFILE_SCOPEI("TileMapView", "DisplayRunObject", MP_AUTO);
+
     if (rdPtr->autoScroll) {
         rdPtr->cameraX = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayX;
         rdPtr->cameraY = rdPtr->rHo.hoAdRunHeader->rh3.rh3DisplayY;
@@ -97,327 +111,332 @@ short WINAPI DLLExport DisplayRunObject(LPRDATA rdPtr)
     unsigned minLayer = max(0, min(layerCount - 1, rdPtr->minLayer));
     unsigned maxLayer = max(0, min(layerCount - 1, rdPtr->maxLayer));
 
-    if (minLayer <= maxLayer && maxLayer < layerCount) {
-        for (unsigned i = minLayer; i <= maxLayer; ++i) {
-            // Get a pointer to the iterated layer
-            Layer & layer = (*rdPtr->p->layers)[i];
+    for (unsigned i = minLayer; i <= maxLayer; ++i) {
+        MICROPROFILE_SCOPEI("TileMapView", "ForEachLayer", MP_AUTO);
 
-            // Store layer settings locally
-            LayerSettings settings = layer.settings;
+        // Get a pointer to the iterated layer
+        Layer & layer = (*rdPtr->p->layers)[i];
 
-            // Sub-layer links (assigned via callback)
-            SubLayer *sl_tileset = 0, *sl_scaleX = 0, *sl_scaleY = 0, *sl_angle = 0,
-                     *sl_animation = 0, *sl_animationFrame = 0;
+        // Store layer settings locally
+        LayerSettings settings = layer.settings;
 
-            // If necessary, load the sub-layers for per-tile render info
-            assignSubLayerSettingLink(tileset, 1);
-            assignSubLayerSettingLink(animation, 1);
-            assignSubLayerSettingLink(animationFrame, 1);
+        // Sub-layer links (assigned via callback)
+        SubLayer *sl_tileset = 0, *sl_scaleX = 0, *sl_scaleY = 0, *sl_angle = 0,
+                    *sl_animation = 0, *sl_animationFrame = 0;
 
-            // Perform layer callback and update sub-layer links if necessary...
-            if (rdPtr->layerCallback.use) {
-                rdPtr->layerCallback.index = i;
-                rdPtr->layerCallback.settings = &settings;
+        // If necessary, load the sub-layers for per-tile render info
+        assignSubLayerSettingLink(tileset, 1);
+        assignSubLayerSettingLink(animation, 1);
+        assignSubLayerSettingLink(animationFrame, 1);
 
-                // Reset layer links
-                memset(&rdPtr->layerCallback.link, 0xff, sizeof(rdPtr->layerCallback.link));
+        // Perform layer callback and update sub-layer links if necessary...
+        if (rdPtr->layerCallback.use) {
+            rdPtr->layerCallback.index = i;
+            rdPtr->layerCallback.settings = &settings;
 
-                // Perform callback
-                generateEvent(3);
-                generateEvent(4);
+            // Reset layer links
+            memset(&rdPtr->layerCallback.link, 0xff, sizeof(rdPtr->layerCallback.link));
 
-                // Assign linked sub-layer pointers
-                assignSubLayerCallbackLink(tileset, 1);
-                assignSubLayerCallbackLink(animation, 1);
-                assignSubLayerCallbackLink(scaleX, 4);
-                assignSubLayerCallbackLink(scaleY, 4);
-                assignSubLayerCallbackLink(angle, 4);
-            }
+            // Perform callback
+            generateEvent(3);
+            generateEvent(4);
 
-            // No data to draw or simply invisible
-            if (!layer.isValid() || !settings.visible)
-                continue;
+            // Assign linked sub-layer pointers
+            assignSubLayerCallbackLink(tileset, 1);
+            assignSubLayerCallbackLink(animation, 1);
+            assignSubLayerCallbackLink(scaleX, 4);
+            assignSubLayerCallbackLink(scaleY, 4);
+            assignSubLayerCallbackLink(angle, 4);
+        }
 
-            // We'll need these so often...
-            unsigned short tileWidth = settings.tileWidth;
-            unsigned short tileHeight = settings.tileHeight;
+        // No data to draw or simply invisible
+        if (!layer.isValid() || !settings.visible)
+            continue;
 
-            // On-screen tile width
-            float renderTileWidth = tileWidth * zoom;
-            float renderTileHeight = tileHeight * zoom;
+        // We'll need these so often...
+        unsigned short tileWidth = settings.tileWidth;
+        unsigned short tileHeight = settings.tileHeight;
 
-#ifdef HWABETA
-            POINT tileCenter = {int(renderTileWidth / 2), int(renderTileHeight / 2)};
-#endif
-
-            // Can't render
-            if (!tileWidth || !tileHeight)
-                continue;
-
-            // Store the layer size
-            int layerWidth = layer.getWidth();
-            int layerHeight = layer.getHeight();
-
-            // On-screen coordinate
-            float drawX = layer.getScreenX(rdPtr->cameraX);
-            float drawY = layer.getScreenY(rdPtr->cameraY);
-
-            float viewportXBias = viewportWidth * zoomPointX;
-            float viewportYBias = viewportHeight * zoomPointY;
-            drawX = (drawX - viewportXBias) * zoom + viewportXBias;
-            drawY = (drawY - viewportYBias) * zoom + viewportYBias;
-
-            // See if the layer is visible at all
-            if ((!settings.wrapX && (drawX >= viewportWidth || drawX + renderTileWidth * layerWidth < 0)) ||
-                (!settings.wrapY &&
-                 (drawY >= viewportHeight || drawY + renderTileHeight * layerHeight < 0)))
-                continue;
-
-            // Region to draw
-            int x1 = 0;
-            int y1 = 0;
-            int x2 = layerWidth; // Exclusive
-            int y2 = layerHeight;
-
-            // Additional tiles to render outside of the visible area
-            int borderX = 1 + (rdPtr->tileCallback.use ? rdPtr->tileCallback.borderX : 0);
-            int borderY = 1 + (rdPtr->tileCallback.use ? rdPtr->tileCallback.borderY : 0);
-            int pixelBorderX = int(borderX * renderTileWidth);
-            int pixelBorderY = int(borderY * renderTileHeight);
-
-            // Optimize drawing region
-            while (drawX <= -pixelBorderX)
-                drawX += renderTileWidth, x1++;
-            while (drawY <= -pixelBorderY)
-                drawY += renderTileHeight, y1++;
-            while (drawX >= viewportWidth + pixelBorderX - (x2 - x1) * renderTileWidth)
-                x2--;
-            while (drawY >= viewportHeight + pixelBorderY - (y2 - y1) * renderTileWidth)
-                y2--;
-
-            // Wrapping
-            if (settings.wrapX) {
-                // TODO: Find optimization
-                if (zoom != 1.0f)
-                    while (drawX > -renderTileWidth * (borderX - 1))
-                        drawX -= renderTileWidth * layerWidth, x1 -= layerWidth;
-                else
-                    while (drawX > -renderTileWidth * (borderX - 1))
-                        drawX -= renderTileWidth, x1++;
-
-                while (drawX < viewportWidth - renderTileWidth * (x2 - x1 - borderX + 1))
-                    x2++;
-
-                signmodPair(x1, x2, 0, layerWidth);
-            }
-
-            if (settings.wrapY) {
-                // TODO: Find optimization
-                if (zoom != 1.0f)
-                    while (drawY > -renderTileHeight * (borderY - 1))
-                        drawY -= renderTileHeight * layerHeight, y1 -= layerHeight;
-                else
-                    while (drawY > -renderTileHeight * (borderY - 1))
-                        drawY -= renderTileHeight, y1++;
-
-                while (drawY < viewportWidth - renderTileWidth * (y2 - y1 - borderY + 1))
-                    y2++;
-
-                signmodPair(y1, y2, 0, layerHeight);
-            }
-
-            // Draw to screen: Add on-screen offset
-            if (!tempSurf) {
-                drawX += viewportX;
-                drawY += viewportY;
-            }
-
-            // If can render
-            if (x2 - x1 > 0 && y2 - y1 > 0) {
-                // Initialize default render settings of tile
-                TileSettings origTileSettings;
-
-                if (sl_scaleX || sl_scaleY || sl_angle)
-                    origTileSettings.transform = true;
-
-                // Settings storage that can be modified in a tile callback
-                TileSettings tileSettings = origTileSettings;
-
-                // Per-tile offset (for callbacks)
-                int offsetX = 0, offsetY = 0;
-
-                // For every visible tile...
-                int screenY = 0;
-                for (int unwrappedY = y1; unwrappedY < y2; ++unwrappedY) {
-                    int screenX = 0;
-                    for (int unwrappedX = x1; unwrappedX < x2; ++unwrappedX) {
-                        // Calculate wrapped coordinate (in case wrapping is
-                        // enabled)
-                        int x = unwrappedX % layerWidth;
-                        int y = unwrappedY % layerHeight;
-
-                        // Get this tile's address
-                        Tile tile = *layer.getTile(x, y);
-
-                        // Calculate position and render the tile, exit when
-                        // impossible
-                        do {
-                            if (tile.id == Tile::EMPTY)
-                                break;
-
-                            // By default, use the layer tileset
-                            unsigned char tilesetIndex = settings.tileset;
-
-                            // Default animation
-                            unsigned char animation = 0;
-                            unsigned frameOffset = 0;
-
-                            // Sub-layer links
-                            if (sl_tileset)
-                                tilesetIndex = *sl_tileset->getCell(x, y);
-                            if (sl_animation)
-                                sl_animation->getCellSafe(x, y, &animation);
-                            if (sl_animationFrame)
-                                sl_animationFrame->getCellSafe(x, y, &frameOffset);
-                            if (sl_scaleX)
-                                sl_scaleX->getCellSafe(x, y, &tileSettings.scaleX);
-                            if (sl_scaleY)
-                                sl_scaleY->getCellSafe(x, y, &tileSettings.scaleY);
-                            if (sl_angle)
-                                sl_angle->getCellSafe(x, y, &tileSettings.angle);
-
-                            // Determine tile opacity
-                            BlitOp blitOp = settings.opacity < 0.999f ? BOP_BLEND : BOP_COPY;
-                            float opacity = settings.opacity;
-                            LPARAM blitParam = 128 - int(opacity * 128);
-
-                            // We use callbacks, so let the programmer do stuff
-                            if (rdPtr->tileCallback.use) {
-                                // Reset the tile settings - the last callback
-                                // might have changed
-                                // them
-                                tileSettings = origTileSettings;
-
-                                rdPtr->tileCallback.settings = &tileSettings;
-                                tileSettings.tileset = tilesetIndex;
-
-                                // Allow modification of tile values
-                                rdPtr->tileCallback.tile = &tile;
-
-                                // Grant access to tile position
-                                rdPtr->tileCallback.x = x;
-                                rdPtr->tileCallback.y = y;
-
-                                // Call condition so the programmer can modify
-                                // the values
-                                generateEvent(1);
-
-                                // Decided not to render tile...
-                                if (!tileSettings.visible)
-                                    break;
-
-                                // Apply tileset index
-                                tilesetIndex = tileSettings.tileset;
-
-                                // Apply offset
-                                offsetX = tileSettings.offsetX;
-                                offsetY = tileSettings.offsetY;
-
-                                // Apply opacity
-                                opacity *= tileSettings.opacity;
-
-                                // Compute blit operation
-                                if (tileSettings.tint != WHITE) {
-                                    blitOp = BOP_RGBAFILTER;
-                                    int rgb = tileSettings.tint & 0xffffff;
-                                    rgb = ((rgb & 0xff) << 16) | (rgb & 0xff00) |
-                                          ((rgb & 0xff0000) >> 16);
-                                    blitParam = rgb | (int(opacity * 255) << 24);
-                                }
-                                else if (opacity < 0.999) {
-                                    blitOp = BOP_BLEND;
-                                    blitParam = 128 - int(opacity * 128);
-                                }
-                            }
-
-                            // Animate if there is more than 1 tile in the
-                            // selected animation
-                            rdPtr->anim[animation].apply(tile, time, frameOffset);
-
-                            // Get the computed tileset's surface
-                            cSurface * tileSurf = tilesetCache[tilesetIndex];
-
-                            if (!tileSurf)
-                                break;
+        // On-screen tile width
+        float renderTileWidth = tileWidth * zoom;
+        float renderTileHeight = tileHeight * zoom;
 
 #ifdef HWABETA
-                            // If zoomed in, act as if tiles were transformed
-                            if (zoom != 1.0f)
-                                tileSettings.transform = true;
-
-                            // HWA only: tile angle and scale on callback.
-                            // Disables accurate clipping!
-                            if (tileSettings.transform) {
-                                float scaleX = zoom * tileSettings.scaleX;
-                                float scaleY = zoom * tileSettings.scaleY;
-                                float angle = tileSettings.angle * 360.0f;
-
-                                float blitX, blitY;
-                                blitX = drawX + (screenX + offsetX + tileCenter.x) * zoom;
-                                blitY = drawY + (screenY + offsetY + tileCenter.y) * zoom;
-
-                                tileSurf->BlitEx(*target, blitX, blitY, scaleX, scaleY,
-                                                 tile.x * tileWidth, tile.y * tileHeight,
-                                                 tileWidth, tileHeight, &tileCenter, angle,
-                                                 BMODE_TRANSP, blitOp, blitParam, blitFlags);
-                                break;
-                            }
+        POINT tileCenter = {int(renderTileWidth / 2), int(renderTileHeight / 2)};
 #endif
 
-                            // Blit from the surface of the tileset with the tile's index in the layer tilesets
-                            if (!clip) {
-                                tileSurf->Blit(*target, (int)drawX + screenX + offsetX,
-                                               (int)drawY + screenY + offsetY, (tile.x) * tileWidth,
-                                               tile.y * tileHeight, tileWidth, tileHeight,
-                                               BMODE_TRANSP, blitOp, blitParam, blitFlags);
+        // Can't render
+        if (!tileWidth || !tileHeight)
+            continue;
+
+        // Store the layer size
+        int layerWidth = layer.getWidth();
+        int layerHeight = layer.getHeight();
+
+        // On-screen coordinate
+        float drawX = layer.getScreenX(rdPtr->cameraX);
+        float drawY = layer.getScreenY(rdPtr->cameraY);
+
+        float viewportXBias = viewportWidth * zoomPointX;
+        float viewportYBias = viewportHeight * zoomPointY;
+        drawX = (drawX - viewportXBias) * zoom + viewportXBias;
+        drawY = (drawY - viewportYBias) * zoom + viewportYBias;
+
+        // See if the layer is visible at all
+        if ((!settings.wrapX && (drawX >= viewportWidth || drawX + renderTileWidth * layerWidth < 0)) ||
+            (!settings.wrapY &&
+                (drawY >= viewportHeight || drawY + renderTileHeight * layerHeight < 0)))
+            continue;
+
+        // Region to draw
+        int x1 = 0;
+        int y1 = 0;
+        int x2 = layerWidth; // Exclusive
+        int y2 = layerHeight;
+
+        // Additional tiles to render outside of the visible area
+        int borderX = 1 + (rdPtr->tileCallback.use ? rdPtr->tileCallback.borderX : 0);
+        int borderY = 1 + (rdPtr->tileCallback.use ? rdPtr->tileCallback.borderY : 0);
+        int pixelBorderX = int(borderX * renderTileWidth);
+        int pixelBorderY = int(borderY * renderTileHeight);
+
+        // Optimize drawing region
+        while (drawX <= -pixelBorderX)
+            drawX += renderTileWidth, x1++;
+        while (drawY <= -pixelBorderY)
+            drawY += renderTileHeight, y1++;
+        while (drawX >= viewportWidth + pixelBorderX - (x2 - x1) * renderTileWidth)
+            x2--;
+        while (drawY >= viewportHeight + pixelBorderY - (y2 - y1) * renderTileWidth)
+            y2--;
+
+        // Wrapping
+        if (settings.wrapX) {
+            // TODO: Find optimization
+            if (zoom != 1.0f)
+                while (drawX > -renderTileWidth * (borderX - 1))
+                    drawX -= renderTileWidth * layerWidth, x1 -= layerWidth;
+            else
+                while (drawX > -renderTileWidth * (borderX - 1))
+                    drawX -= renderTileWidth, x1++;
+
+            while (drawX < viewportWidth - renderTileWidth * (x2 - x1 - borderX + 1))
+                x2++;
+
+            signmodPair(x1, x2, 0, layerWidth);
+        }
+
+        if (settings.wrapY) {
+            // TODO: Find optimization
+            if (zoom != 1.0f)
+                while (drawY > -renderTileHeight * (borderY - 1))
+                    drawY -= renderTileHeight * layerHeight, y1 -= layerHeight;
+            else
+                while (drawY > -renderTileHeight * (borderY - 1))
+                    drawY -= renderTileHeight, y1++;
+
+            while (drawY < viewportWidth - renderTileWidth * (y2 - y1 - borderY + 1))
+                y2++;
+
+            signmodPair(y1, y2, 0, layerHeight);
+        }
+
+        // Draw to screen: Add on-screen offset
+        if (!tempSurf) {
+            drawX += viewportX;
+            drawY += viewportY;
+        }
+
+        // If can render
+        if (x2 - x1 > 0 && y2 - y1 > 0) {
+            // Initialize default render settings of tile
+            TileSettings origTileSettings;
+
+            if (sl_scaleX || sl_scaleY || sl_angle)
+                origTileSettings.transform = true;
+
+            // Settings storage that can be modified in a tile callback
+            TileSettings tileSettings = origTileSettings;
+
+            // Per-tile offset (for callbacks)
+            int offsetX = 0, offsetY = 0;
+
+            // For every visible tile...
+            int screenY = 0;
+            for (int unwrappedY = y1; unwrappedY < y2; ++unwrappedY) {
+                int screenX = 0;
+                for (int unwrappedX = x1; unwrappedX < x2; ++unwrappedX) {
+
+                    MICROPROFILE_SCOPEI("TileMapView", "ForEachTile", MP_AUTO);
+
+                    // Calculate wrapped coordinate (in case wrapping is
+                    // enabled)
+                    int x = unwrappedX % layerWidth;
+                    int y = unwrappedY % layerHeight;
+
+                    // Get this tile's address
+                    Tile tile = *layer.getTile(x, y);
+
+                    // Calculate position and render the tile, exit when
+                    // impossible
+                    do {
+                        if (tile.id == Tile::EMPTY)
+                            break;
+
+                        MICROPROFILE_SCOPEI("TileMapView", "SubLayerChecks", MP_AUTO);
+                        // By default, use the layer tileset
+                        unsigned char tilesetIndex = settings.tileset;
+
+                        // Default animation
+                        unsigned char animation = 0;
+                        unsigned frameOffset = 0;
+
+                        // Sub-layer links
+                        if (sl_tileset)
+                            tilesetIndex = *sl_tileset->getCell(x, y);
+                        if (sl_animation)
+                            sl_animation->getCellSafe(x, y, &animation);
+                        if (sl_animationFrame)
+                            sl_animationFrame->getCellSafe(x, y, &frameOffset);
+                        if (sl_scaleX)
+                            sl_scaleX->getCellSafe(x, y, &tileSettings.scaleX);
+                        if (sl_scaleY)
+                            sl_scaleY->getCellSafe(x, y, &tileSettings.scaleY);
+                        if (sl_angle)
+                            sl_angle->getCellSafe(x, y, &tileSettings.angle);
+
+                        // Determine tile opacity
+                        BlitOp blitOp = settings.opacity < 0.999f ? BOP_BLEND : BOP_COPY;
+                        float opacity = settings.opacity;
+                        LPARAM blitParam = 128 - int(opacity * 128);
+
+                        // We use callbacks, so let the programmer do stuff
+                        if (rdPtr->tileCallback.use) {
+                            // Reset the tile settings - the last callback
+                            // might have changed
+                            // them
+                            tileSettings = origTileSettings;
+
+                            rdPtr->tileCallback.settings = &tileSettings;
+                            tileSettings.tileset = tilesetIndex;
+
+                            // Allow modification of tile values
+                            rdPtr->tileCallback.tile = &tile;
+
+                            // Grant access to tile position
+                            rdPtr->tileCallback.x = x;
+                            rdPtr->tileCallback.y = y;
+
+                            // Call condition so the programmer can modify
+                            // the values
+                            generateEvent(1);
+
+                            // Decided not to render tile...
+                            if (!tileSettings.visible)
+                                break;
+
+                            // Apply tileset index
+                            tilesetIndex = tileSettings.tileset;
+
+                            // Apply offset
+                            offsetX = tileSettings.offsetX;
+                            offsetY = tileSettings.offsetY;
+
+                            // Apply opacity
+                            opacity *= tileSettings.opacity;
+
+                            // Compute blit operation
+                            if (tileSettings.tint != WHITE) {
+                                blitOp = BOP_RGBAFILTER;
+                                int rgb = tileSettings.tint & 0xffffff;
+                                rgb = ((rgb & 0xff) << 16) | (rgb & 0xff00) |
+                                        ((rgb & 0xff0000) >> 16);
+                                blitParam = rgb | (int(opacity * 255) << 24);
                             }
-
-                            // Before blitting, perform clipping so that we won't draw outside of the viewport...
-                            else {
-
-                                tileSurf->Blit(*target, (int)drawX + screenX + offsetX,
-                                               (int)drawY + screenY + offsetY, tile.x * tileWidth,
-                                               tile.y * tileHeight, tileWidth, tileHeight,
-                                               BMODE_TRANSP, blitOp, blitParam, blitFlags);
-
-                                int dX, dY, sX, sY, sW, sH;
-                                dX = (int)drawX + screenX + offsetX - viewportX;
-                                dY = (int)drawY + screenY + offsetY - viewportY;
-                                sX = tile.x * tileWidth;
-                                sY = tile.y * tileHeight;
-
-                                clipBlitTiles(dX, viewportWidth, sX, sW, tileWidth);
-                                clipBlitTiles(dY, viewportHeight, sY, sH, tileHeight);
-
-                                // Draw if still visible
-                                if (dX < viewportWidth && dY < viewportHeight && sW > 0 && sH > 0) {
-                                    // Apply viewport position
-                                    dX += viewportX;
-                                    dY += viewportY;
-
-                                    tileSurf->Blit(*target, dX, dY, sX, sY, sW, sH,
-                                                   BMODE_TRANSP, blitOp, blitParam, blitFlags);
-                                }
+                            else if (opacity < 0.999) {
+                                blitOp = BOP_BLEND;
+                                blitParam = 128 - int(opacity * 128);
                             }
-                        } while (0);
+                        }
+                        MICROPROFILE_SCOPEI("TileMapView", "ApplyAnim", MP_AUTO);
 
-                        // Calculate next on-screen X
-                        screenX += tileWidth;
-                    }
+                        // Animate if there is more than 1 tile in the
+                        // selected animation
+                        rdPtr->anim[animation].apply(tile, time, frameOffset);
 
-                    // Calculate next on-screen Y
-                    screenY += tileHeight;
+                        // Get the computed tileset's surface
+                        cSurface * tileSurf = tilesetCache[tilesetIndex];
+
+                        if (!tileSurf)
+                            break;
+
+#ifdef HWABETA
+                        // If zoomed in, act as if tiles were transformed
+                        if (zoom != 1.0f)
+                            tileSettings.transform = true;
+
+
+
+                        MICROPROFILE_SCOPEI("TileMapView", "AboutToRender", MP_AUTO);
+                        // HWA only: tile angle and scale on callback.
+                        // Disables accurate clipping!
+                        if (tileSettings.transform) {
+                            float scaleX = zoom * tileSettings.scaleX;
+                            float scaleY = zoom * tileSettings.scaleY;
+                            float angle = tileSettings.angle * 360.0f;
+
+                            float blitX, blitY;
+                            blitX = drawX + (screenX + offsetX + tileCenter.x) * zoom;
+                            blitY = drawY + (screenY + offsetY + tileCenter.y) * zoom;
+
+                            MICROPROFILE_SCOPEI("TileMapView", "BlitEx", MP_AUTO);
+                            tileSurf->BlitEx(*target, blitX, blitY, scaleX, scaleY,
+                                                tile.x * tileWidth, tile.y * tileHeight,
+                                                tileWidth, tileHeight, &tileCenter, angle,
+                                                BMODE_TRANSP, blitOp, blitParam, blitFlags);
+                            break;
+                        }
+#endif
+
+                        // Blit from the surface of the tileset with the tile's index in the layer tilesets
+                        if (!clip) {
+                            MICROPROFILE_SCOPEI("TileMapView", "Blit", MP_AUTO);
+                            tileSurf->Blit(*target, (int)drawX + screenX + offsetX,
+                                            (int)drawY + screenY + offsetY, (tile.x) * tileWidth,
+                                            tile.y * tileHeight, tileWidth, tileHeight,
+                                            BMODE_TRANSP, blitOp, blitParam, blitFlags);
+                        }
+
+                        // Before blitting, perform clipping so that we won't draw outside of the viewport...
+                        else {
+                            MICROPROFILE_SCOPEI("TileMapView", "Blit", MP_AUTO);
+                            int dX, dY, sX, sY, sW, sH;
+                            dX = (int)drawX + screenX + offsetX - viewportX;
+                            dY = (int)drawY + screenY + offsetY - viewportY;
+                            sX = tile.x * tileWidth;
+                            sY = tile.y * tileHeight;
+
+                            clipBlitTiles(dX, viewportWidth, sX, sW, tileWidth);
+                            clipBlitTiles(dY, viewportHeight, sY, sH, tileHeight);
+
+                            // Draw if still visible
+                            if (dX < viewportWidth && dY < viewportHeight && sW > 0 && sH > 0) {
+                                // Apply viewport position
+                                dX += viewportX;
+                                dY += viewportY;
+
+                                tileSurf->Blit(*target, dX, dY, sX, sY, sW, sH,
+                                                BMODE_TRANSP, blitOp, blitParam, blitFlags);
+                            }
+                        }
+                    } while (0);
+
+                    // Calculate next on-screen X
+                    screenX += tileWidth;
                 }
+
+                // Calculate next on-screen Y
+                screenY += tileHeight;
             }
         }
     }
